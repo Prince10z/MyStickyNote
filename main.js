@@ -39,6 +39,22 @@ function saveConfig() {
   }
 }
 
+function updateDockVisibility() {
+  if (process.platform !== 'darwin') return;
+  const hasPinnedNotes = notesConfig.notes.some(n => n.alwaysOnTop);
+  try {
+    if (hasPinnedNotes) {
+      app.dock.hide();
+      console.log('[MAIN LOG] Dock hidden (pinned notes exist)');
+    } else {
+      app.dock.show();
+      console.log('[MAIN LOG] Dock shown (no pinned notes)');
+    }
+  } catch (err) {
+    console.error('[MAIN ERROR] Failed to update dock visibility:', err);
+  }
+}
+
 function createDefaultNoteConfig(id) {
   return {
     id: id || `note-${Date.now()}`,
@@ -169,6 +185,7 @@ ipcMain.handle('toggle-always-on-top', (event, noteId, alwaysOnTop) => {
       config.alwaysOnTop = alwaysOnTop;
       saveConfig();
     }
+    updateDockVisibility();
   }
 });
 
@@ -194,6 +211,7 @@ ipcMain.handle('create-new-note', () => {
   notesConfig.notes.push(newConfig);
   saveConfig();
   createNoteWindow(newId);
+  updateDockVisibility();
   return newId;
 });
 
@@ -204,6 +222,7 @@ ipcMain.handle('delete-note', (event, noteId) => {
   }
   notesConfig.notes = notesConfig.notes.filter(n => n.id !== noteId);
   saveConfig();
+  updateDockVisibility();
 
   // If no windows left, quit
   if (notesConfig.notes.length === 0) {
@@ -214,6 +233,7 @@ ipcMain.handle('delete-note', (event, noteId) => {
 // App Lifecycle
 app.whenReady().then(() => {
   loadConfig();
+  updateDockVisibility();
   
   if (process.platform === 'darwin') {
     try {
