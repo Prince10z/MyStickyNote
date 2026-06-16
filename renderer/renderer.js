@@ -57,6 +57,10 @@ const alertBtnDismiss = document.getElementById('alert-btn-dismiss');
 
 // Settings elements
 const settingAlwaysOnTop = document.getElementById('setting-always-on-top');
+const settingAutoDim = document.getElementById('setting-auto-dim');
+const settingDimOpacity = document.getElementById('setting-dim-opacity');
+const settingDimOpacityLabel = document.getElementById('setting-dim-opacity-label');
+const settingDimOpacityContainer = document.getElementById('setting-dim-opacity-container');
 const settingOpacity = document.getElementById('setting-opacity');
 const settingOpacityLabel = document.getElementById('setting-opacity-label');
 const fontBtns = document.querySelectorAll('.font-btn');
@@ -148,6 +152,14 @@ function stopRingingAlert() {
 
 alertBtnDismiss.addEventListener('click', stopRingingAlert);
 
+function toggleDimOpacityVisibility() {
+  if (settingAutoDim.checked) {
+    settingDimOpacityContainer.style.display = 'flex';
+  } else {
+    settingDimOpacityContainer.style.display = 'none';
+  }
+}
+
 /* ==========================================================================
    Initialization
    ========================================================================== */
@@ -185,7 +197,18 @@ async function init() {
   const opacityVal = noteConfig.opacity !== undefined ? noteConfig.opacity : 100;
   settingOpacity.value = opacityVal;
   settingOpacityLabel.textContent = `${opacityVal}%`;
-  document.querySelector('.glass-container').style.opacity = opacityVal / 100;
+
+  // Load dim opacity setting
+  const dimOpacityVal = noteConfig.dimOpacity !== undefined ? noteConfig.dimOpacity : 45;
+  settingDimOpacity.value = dimOpacityVal;
+  settingDimOpacityLabel.textContent = `${dimOpacityVal}%`;
+  
+  // Load auto-dim setting
+  settingAutoDim.checked = !!noteConfig.autoDim;
+  toggleDimOpacityVisibility();
+
+  // Apply initial window opacity based on active settings and focus state
+  updateWindowOpacity();
 
   // Load font size setting
   const fontSizeVal = noteConfig.fontSize || '15px';
@@ -223,7 +246,9 @@ function triggerStateSave() {
       tab: noteConfig.tab,
       alarmTime: noteConfig.alarmTime,
       opacity: noteConfig.opacity,
-      fontSize: noteConfig.fontSize
+      fontSize: noteConfig.fontSize,
+      autoDim: noteConfig.autoDim,
+      dimOpacity: noteConfig.dimOpacity
     });
   }, 400);
 }
@@ -271,10 +296,42 @@ settingAlwaysOnTop.addEventListener('change', () => {
 settingOpacity.addEventListener('input', () => {
   const val = settingOpacity.value;
   settingOpacityLabel.textContent = `${val}%`;
-  document.querySelector('.glass-container').style.opacity = val / 100;
   noteConfig.opacity = val;
+  updateWindowOpacity();
   triggerStateSave();
 });
+
+settingAutoDim.addEventListener('change', () => {
+  noteConfig.autoDim = settingAutoDim.checked;
+  toggleDimOpacityVisibility();
+  updateWindowOpacity();
+  triggerStateSave();
+});
+
+settingDimOpacity.addEventListener('input', () => {
+  const val = settingDimOpacity.value;
+  settingDimOpacityLabel.textContent = `${val}%`;
+  noteConfig.dimOpacity = val;
+  updateWindowOpacity();
+  triggerStateSave();
+});
+
+// Focus/Blur Window Opacity Management
+function updateWindowOpacity() {
+  const activeOpacity = (noteConfig.opacity !== undefined ? noteConfig.opacity : 100) / 100;
+  const dimOpacity = (noteConfig.dimOpacity !== undefined ? noteConfig.dimOpacity : 45) / 100;
+  const isFocused = document.hasFocus();
+  
+  if (!isFocused && noteConfig.autoDim) {
+    // Fade the note down to a lower visibility layer when not focused
+    document.querySelector('.glass-container').style.opacity = Math.min(activeOpacity, dimOpacity);
+  } else {
+    document.querySelector('.glass-container').style.opacity = activeOpacity;
+  }
+}
+
+window.addEventListener('focus', updateWindowOpacity);
+window.addEventListener('blur', updateWindowOpacity);
 
 fontBtns.forEach(btn => {
   btn.addEventListener('click', () => {

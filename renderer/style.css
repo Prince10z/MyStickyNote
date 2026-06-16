@@ -168,33 +168,33 @@ html, body {
 
 /* Themes - Applied to Body */
 body.theme-yellow .glass-container {
-  background: rgba(254, 240, 138, 0.55);
-  border-color: rgba(254, 240, 138, 0.35);
+  background: rgba(254, 240, 138, 0.85);
+  border-color: rgba(254, 240, 138, 0.5);
   color: #451a03;
 }
 body.theme-blue .glass-container {
-  background: rgba(191, 219, 254, 0.55);
-  border-color: rgba(191, 219, 254, 0.35);
+  background: rgba(191, 219, 254, 0.85);
+  border-color: rgba(191, 219, 254, 0.5);
   color: #1e3a8a;
 }
 body.theme-green .glass-container {
-  background: rgba(187, 247, 208, 0.55);
-  border-color: rgba(187, 247, 208, 0.35);
+  background: rgba(187, 247, 208, 0.85);
+  border-color: rgba(187, 247, 208, 0.5);
   color: #064e3b;
 }
 body.theme-pink .glass-container {
-  background: rgba(251, 207, 232, 0.55);
-  border-color: rgba(251, 207, 232, 0.35);
+  background: rgba(251, 207, 232, 0.85);
+  border-color: rgba(251, 207, 232, 0.5);
   color: #701a75;
 }
 body.theme-purple .glass-container {
-  background: rgba(233, 213, 255, 0.55);
-  border-color: rgba(233, 213, 255, 0.35);
+  background: rgba(233, 213, 255, 0.85);
+  border-color: rgba(233, 213, 255, 0.5);
   color: #4c1d95;
 }
 body.theme-dark .glass-container {
-  background: rgba(15, 23, 42, 0.75);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(15, 23, 42, 0.92);
+  border-color: rgba(255, 255, 255, 0.2);
   color: #f8fafc;
 }
 

@@ -149,6 +149,25 @@
           
           <div class="setting-item">
             <div class="setting-label">
+              <span>Auto-Dim when Inactive</span>
+              <span class="setting-desc">Fade note when clicking on other apps</span>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="setting-auto-dim">
+              <label for="setting-auto-dim" class="switch-slider"></label>
+            </div>
+          </div>
+          
+          <div class="setting-item" id="setting-dim-opacity-container">
+            <div class="setting-label">
+              <span>Dimmed Opacity</span>
+              <span class="setting-desc" id="setting-dim-opacity-label">45%</span>
+            </div>
+            <input type="range" id="setting-dim-opacity" min="10" max="90" value="45" class="opacity-slider">
+          </div>
+          
+          <div class="setting-item">
+            <div class="setting-label">
               <span>Note Opacity</span>
               <span class="setting-desc" id="setting-opacity-label">100%</span>
             </div>

@@ -52,7 +52,10 @@ function createDefaultNoteConfig(id) {
     tab: 'note',
     timerDuration: 0,
     alarmTime: null,
-    stopwatchState: null
+    stopwatchState: null,
+    opacity: 100,
+    autoDim: false,
+    dimOpacity: 45
   };
 }
 
