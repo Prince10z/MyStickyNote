@@ -19,8 +19,8 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
         </button>
         <!-- Color Menu Toggle -->
-        <button id="btn-color" title="Change Color" class="icon-btn">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 14.7255 3.09032 17.1962 4.85857 19C5.35245 19.5029 5.34023 20.3129 4.86241 20.8129L4.85857 20.817C4.37255 21.3256 3.55767 21.3129 3.08502 20.7877C1.16634 18.6558 0 15.823 0 12C0 5.37258 5.37258 0 12 0C18.6274 0 24 5.37258 24 12C24 18.6274 18.6274 24 12 24C10.597 24 9.42621 23.0135 9.12781 21.6496C9.00693 21.0971 9.38722 20.5746 9.94829 20.5218L10.0298 20.519C11.1444 20.519 12 21.183 12 22Z"></path><circle cx="7.5" cy="10.5" r="1.5" fill="currentColor"></circle><circle cx="11.5" cy="7.5" r="1.5" fill="currentColor"></circle><circle cx="16.5" cy="9.5" r="1.5" fill="currentColor"></circle><circle cx="15.5" cy="14.5" r="1.5" fill="currentColor"></circle></svg>
+        <button id="btn-color" title="Change Color" class="icon-btn theme-indicator-btn">
+          <span class="theme-circle-indicator"></span>
         </button>
         <!-- Color Palette Dropdown (Absolute positioned) -->
         <div id="color-palette" class="color-palette hidden">
@@ -174,7 +174,7 @@
             <input type="range" id="setting-opacity" min="30" max="100" value="100" class="opacity-slider">
           </div>
           
-          <div class="setting-item">
+          <div class="setting-item setting-item-col">
             <div class="setting-label">
               <span>Font Size</span>
               <span class="setting-desc">Adjust note editor text size</span>

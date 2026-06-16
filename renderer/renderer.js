@@ -211,7 +211,7 @@ async function init() {
   updateWindowOpacity();
 
   // Load font size setting
-  const fontSizeVal = noteConfig.fontSize || '15px';
+  const fontSizeVal = noteConfig.fontSize || '13px';
   noteEditor.style.fontSize = fontSizeVal;
   fontBtns.forEach(btn => {
     if (btn.dataset.size === fontSizeVal) {

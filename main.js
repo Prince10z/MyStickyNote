@@ -115,14 +115,16 @@ function createNoteWindow(noteId) {
   if (config.alwaysOnTop) {
     try {
       win.setAlwaysOnTop(true, 'status', 1);
-      win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+      win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
       console.log(`[MAIN LOG] Window ${noteId} set to alwaysOnTop on startup`);
     } catch (err) {
       console.error(`[MAIN ERROR] Failed to set alwaysOnTop on startup:`, err);
     }
   } else {
     try {
-      win.setAlwaysOnTop(false, 'normal', 0);
+      win.setAlwaysOnTop(false);
+      win.setVisibleOnAllWorkspaces(false, { skipTransformProcessType: true });
+      console.log(`[MAIN LOG] Window ${noteId} set to normal level on startup`);
     } catch (err) {
       console.error(`[MAIN ERROR] Failed to demote window level on startup:`, err);
     }
@@ -165,27 +167,33 @@ ipcMain.handle('update-note-config', (event, noteId, data) => {
 
 ipcMain.handle('toggle-always-on-top', (event, noteId, alwaysOnTop) => {
   console.log(`[MAIN LOG] toggle-always-on-top called for ${noteId} with value: ${alwaysOnTop}`);
+  
+  // 1. Update config first so that updateDockVisibility behaves correctly
+  const config = notesConfig.notes.find(n => n.id === noteId);
+  if (config) {
+    config.alwaysOnTop = alwaysOnTop;
+    saveConfig();
+  }
+  
+  // 2. Update dock visibility before changing window levels
+  updateDockVisibility();
+
+  // 3. Update window always-on-top state
   const win = windows.get(noteId);
   if (win) {
     try {
       if (alwaysOnTop) {
         win.setAlwaysOnTop(true, 'status', 1);
-        win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+        win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
         console.log(`[MAIN LOG] Window ${noteId} alwaysOnTop set to true (status level)`);
       } else {
-        win.setAlwaysOnTop(false, 'normal', 0);
-        win.setVisibleOnAllWorkspaces(false);
+        win.setAlwaysOnTop(false);
+        win.setVisibleOnAllWorkspaces(false, { skipTransformProcessType: true });
         console.log(`[MAIN LOG] Window ${noteId} alwaysOnTop set to false (normal level)`);
       }
     } catch (err) {
       console.error(`[MAIN ERROR] Failed to set always-on-top:`, err);
     }
-    const config = notesConfig.notes.find(n => n.id === noteId);
-    if (config) {
-      config.alwaysOnTop = alwaysOnTop;
-      saveConfig();
-    }
-    updateDockVisibility();
   }
 });
 
@@ -210,8 +218,8 @@ ipcMain.handle('create-new-note', () => {
 
   notesConfig.notes.push(newConfig);
   saveConfig();
-  createNoteWindow(newId);
   updateDockVisibility();
+  createNoteWindow(newId);
   return newId;
 });
 
@@ -259,9 +267,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  app.quit();
 });
 
 // Diagnosing Renderer Logs via Terminal
