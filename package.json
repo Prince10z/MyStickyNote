@@ -1,0 +1,25 @@
+{
+  "name": "smart-sticky-note",
+  "version": "1.0.0",
+  "description": "A smart sticky note application for desktop with always-on-top mode, timers, alarms, and stopwatch.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "electron": "^31.0.0"
+  },
+  "build": {
+    "appId": "com.prince10z.smartstickynote",
+    "mac": {
+      "icon": "assets/icon.png",
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "icon": "assets/icon.png"
+    }
+  }
+}

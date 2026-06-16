@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Sticky Note</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-yellow">
+  <div class="glass-container">
+    <!-- Draggable Header -->
+    <header class="drag-header">
+      <div class="header-left no-drag">
+        <!-- New Note Button -->
+        <button id="btn-new" title="New Sticky Note" class="icon-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        </button>
+        <!-- Color Menu Toggle -->
+        <button id="btn-color" title="Change Color" class="icon-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 14.7255 3.09032 17.1962 4.85857 19C5.35245 19.5029 5.34023 20.3129 4.86241 20.8129L4.85857 20.817C4.37255 21.3256 3.55767 21.3129 3.08502 20.7877C1.16634 18.6558 0 15.823 0 12C0 5.37258 5.37258 0 12 0C18.6274 0 24 5.37258 24 12C24 18.6274 18.6274 24 12 24C10.597 24 9.42621 23.0135 9.12781 21.6496C9.00693 21.0971 9.38722 20.5746 9.94829 20.5218L10.0298 20.519C11.1444 20.519 12 21.183 12 22Z"></path><circle cx="7.5" cy="10.5" r="1.5" fill="currentColor"></circle><circle cx="11.5" cy="7.5" r="1.5" fill="currentColor"></circle><circle cx="16.5" cy="9.5" r="1.5" fill="currentColor"></circle><circle cx="15.5" cy="14.5" r="1.5" fill="currentColor"></circle></svg>
+        </button>
+        <!-- Color Palette Dropdown (Absolute positioned) -->
+        <div id="color-palette" class="color-palette hidden">
+          <div class="color-dot yellow active" data-color="yellow" title="Yellow"></div>
+          <div class="color-dot blue" data-color="blue" title="Blue"></div>
+          <div class="color-dot green" data-color="green" title="Green"></div>
+          <div class="color-dot pink" data-color="pink" title="Pink"></div>
+          <div class="color-dot purple" data-color="purple" title="Purple"></div>
+          <div class="color-dot dark" data-color="dark" title="Dark Slate"></div>
+        </div>
+      </div>
+
+      <div class="header-center">
+        <span class="app-title">Sticky</span>
+      </div>
+
+      <div class="header-right no-drag">
+        <!-- Always on Top Pin Button -->
+        <button id="btn-pin" title="Pin to Screen (Always on Top)" class="icon-btn">
+          <svg class="pin-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="17" x2="12" y2="22"></line><path d="M5 17h14v-1.76a2 2 0 0 0-.44-1.24l-2.78-3.56A2 2 0 0 1 15 9.2V5a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4.2a2 2 0 0 1-.78 1.24l-2.78 3.56a2 2 0 0 0-.44 1.24V17z"></path></svg>
+        </button>
+        <!-- Delete/Close Note Button -->
+        <button id="btn-delete" title="Delete Note" class="icon-btn delete-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="content-area">
+      
+      <!-- Tab 1: Note Text Editor -->
+      <section id="panel-note" class="panel active">
+        <textarea id="note-editor" placeholder="Write your sticky note here..."></textarea>
+      </section>
+
+      <!-- Tab 2: Timer -->
+      <section id="panel-timer" class="panel">
+        <div class="timer-container">
+          <div class="timer-display-ring">
+            <svg class="progress-ring" width="160" height="160">
+              <circle class="progress-ring__circle-bg" stroke="rgba(255,255,255,0.15)" stroke-width="6" fill="transparent" r="72" cx="80" cy="80"/>
+              <circle class="progress-ring__circle" stroke="currentColor" stroke-width="6" fill="transparent" r="72" cx="80" cy="80"/>
+            </svg>
+            <div class="timer-time-label" id="timer-label">00:00</div>
+          </div>
+          
+          <!-- Timer Setup Fields -->
+          <div class="timer-inputs" id="timer-inputs">
+            <input type="number" id="timer-min" min="0" max="99" value="05" placeholder="MM">
+            <span>:</span>
+            <input type="number" id="timer-sec" min="0" max="59" value="00" placeholder="SS">
+          </div>
+
+          <!-- Timer Actions -->
+          <div class="control-buttons">
+            <button id="timer-btn-start" class="btn btn-primary">Start</button>
+            <button id="timer-btn-pause" class="btn btn-secondary hidden">Pause</button>
+            <button id="timer-btn-reset" class="btn btn-danger hidden">Reset</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab 3: Alarm -->
+      <section id="panel-alarm" class="panel">
+        <div class="alarm-container">
+          <div class="digital-clock" id="alarm-live-clock">00:00:00</div>
+          
+          <div class="alarm-setup">
+            <input type="time" id="alarm-time-input">
+            <button id="alarm-btn-set" class="btn btn-primary">Set Alarm</button>
+          </div>
+
+          <!-- Alarm Status / Dynamic Card -->
+          <div id="alarm-status-card" class="alarm-card hidden">
+            <div class="alarm-info">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+              <div>
+                <span class="alarm-time" id="active-alarm-time">08:00 AM</span>
+                <span class="alarm-countdown" id="active-alarm-countdown">in 25 mins</span>
+              </div>
+            </div>
+            <button id="alarm-btn-cancel" class="icon-btn cancel-alarm-btn" title="Cancel Alarm">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Tab 4: Stopwatch -->
+      <section id="panel-stopwatch" class="panel">
+        <div class="stopwatch-container">
+          <div class="stopwatch-display">
+            <span class="sw-time" id="sw-main">00:00</span><span class="sw-ms" id="sw-ms">.00</span>
+          </div>
+
+          <!-- Stopwatch Buttons -->
+          <div class="control-buttons">
+            <button id="sw-btn-lap" class="btn btn-secondary" disabled>Lap</button>
+            <button id="sw-btn-start" class="btn btn-primary">Start</button>
+            <button id="sw-btn-pause" class="btn btn-secondary hidden">Pause</button>
+            <button id="sw-btn-reset" class="btn btn-danger hidden">Reset</button>
+          </div>
+
+          <!-- Lap list -->
+          <div class="laps-container">
+            <ul id="sw-laps-list"></ul>
+          </div>
+        </div>
+      </section>
+      <!-- Tab 5: Settings -->
+      <section id="panel-settings" class="panel">
+        <div class="settings-container">
+          <h3 class="settings-title">Note Settings</h3>
+          
+          <div class="setting-item">
+            <div class="setting-label">
+              <span>Always on Top</span>
+              <span class="setting-desc">Pin window on top of other full-screen apps</span>
+            </div>
+            <div class="toggle-switch">
+              <input type="checkbox" id="setting-always-on-top">
+              <label for="setting-always-on-top" class="switch-slider"></label>
+            </div>
+          </div>
+          
+          <div class="setting-item">
+            <div class="setting-label">
+              <span>Note Opacity</span>
+              <span class="setting-desc" id="setting-opacity-label">100%</span>
+            </div>
+            <input type="range" id="setting-opacity" min="30" max="100" value="100" class="opacity-slider">
+          </div>
+          
+          <div class="setting-item">
+            <div class="setting-label">
+              <span>Font Size</span>
+              <span class="setting-desc">Adjust note editor text size</span>
+            </div>
+            <div class="font-size-options">
+              <button class="font-btn active" data-size="13px">Small</button>
+              <button class="font-btn" data-size="16px">Medium</button>
+              <button class="font-btn" data-size="20px">Large</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar -->
+    <nav class="bottom-nav no-drag">
+      <button class="nav-item active" data-tab="note" title="Notes">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+        <span>Note</span>
+      </button>
+      <button class="nav-item" data-tab="timer" title="Timer">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+        <span>Timer</span>
+      </button>
+      <button class="nav-item" data-tab="alarm" title="Alarm">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        <span>Alarm</span>
+      </button>
+      <button class="nav-item" data-tab="stopwatch" title="Stopwatch">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 15 15"></polyline></svg>
+        <span>Watch</span>
+      </button>
+      <button class="nav-item" data-tab="settings" title="Settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- Overlay for active ringing alerts -->
+  <div id="alert-overlay" class="alert-overlay hidden">
+    <div class="alert-dialog">
+      <div class="alert-icon-pulse">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+      </div>
+      <h2 id="alert-title">Time's Up!</h2>
+      <p id="alert-message">Your countdown timer has completed.</p>
+      <button id="alert-btn-dismiss" class="btn btn-primary">Dismiss</button>
+    </div>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
