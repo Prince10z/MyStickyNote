@@ -81,7 +81,6 @@ function createNoteWindow(noteId) {
     x: config.x !== null ? config.x : Math.round((devWidth - 320) / 2),
     y: config.y !== null ? config.y : Math.round((devHeight - 420) / 2),
     frame: false,
-    type: 'panel',
     transparent: true,
     hasShadow: true,
     alwaysOnTop: config.alwaysOnTop || false,
