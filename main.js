@@ -23,6 +23,22 @@ function loadConfig() {
     notesConfig = { notes: [] };
   }
 
+  // Ensure global config exists
+  if (!notesConfig.global) {
+    notesConfig.global = {
+      activeProvider: 'gemini',
+      providers: {
+        gemini: { apiKey: '', model: 'gemini-2.5-flash' },
+        openai: { apiKey: '', model: 'gpt-4o-mini' },
+        deepseek: { apiKey: '', model: 'deepseek-chat' }
+      }
+    };
+  }
+
+  if (!notesConfig.global.trash) {
+    notesConfig.global.trash = [];
+  }
+
   // Create default note if list is empty
   if (!notesConfig.notes || notesConfig.notes.length === 0) {
     notesConfig.notes = [createDefaultNoteConfig('note-default')];
@@ -93,13 +109,14 @@ function createNoteWindow(noteId) {
 
   const win = new BrowserWindow({
     width: config.width || 320,
-    height: config.height || 420,
+    height: config.collapsed ? 44 : (config.height || 420),
     x: config.x !== null ? config.x : Math.round((devWidth - 320) / 2),
     y: config.y !== null ? config.y : Math.round((devHeight - 420) / 2),
     frame: false,
     transparent: true,
     hasShadow: true,
     alwaysOnTop: config.alwaysOnTop || false,
+    resizable: !config.collapsed,
     icon: path.join(__dirname, 'assets', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -136,8 +153,10 @@ function createNoteWindow(noteId) {
     const bounds = win.getBounds();
     config.x = bounds.x;
     config.y = bounds.y;
-    config.width = bounds.width;
-    config.height = bounds.height;
+    if (!config.collapsed) {
+      config.width = bounds.width;
+      config.height = bounds.height;
+    }
     saveConfig();
   };
 
@@ -163,6 +182,22 @@ ipcMain.handle('update-note-config', (event, noteId, data) => {
     notesConfig.notes[index] = { ...notesConfig.notes[index], ...data };
     saveConfig();
   }
+});
+
+ipcMain.handle('get-global-config', () => {
+  return notesConfig.global || {
+    activeProvider: 'gemini',
+    providers: {
+      gemini: { apiKey: '', model: 'gemini-2.5-flash' },
+      openai: { apiKey: '', model: 'gpt-4o-mini' },
+      deepseek: { apiKey: '', model: 'deepseek-chat' }
+    }
+  };
+});
+
+ipcMain.handle('update-global-config', (event, data) => {
+  notesConfig.global = { ...notesConfig.global, ...data };
+  saveConfig();
 });
 
 ipcMain.handle('toggle-always-on-top', (event, noteId, alwaysOnTop) => {
@@ -197,6 +232,47 @@ ipcMain.handle('toggle-always-on-top', (event, noteId, alwaysOnTop) => {
   }
 });
 
+ipcMain.handle('toggle-collapse-window', (event, noteId) => {
+  const win = windows.get(noteId);
+  const config = notesConfig.notes.find(n => n.id === noteId);
+  if (win && config) {
+    config.collapsed = !config.collapsed;
+    
+    if (config.collapsed) {
+      config.expandedHeight = win.getBounds().height;
+      win.setResizable(false);
+      win.setSize(config.width || 320, 44, true); // smooth animate on macOS
+    } else {
+      win.setSize(config.width || 320, config.expandedHeight || 420, true); // smooth animate on macOS
+      setTimeout(() => {
+        if (win && !win.isDestroyed()) {
+          win.setResizable(true);
+        }
+      }, 300); // Wait for animation to finish before enabling resize
+    }
+    saveConfig();
+    return config.collapsed;
+  }
+  return false;
+});
+
+ipcMain.handle('temp-expand-window', (event, noteId) => {
+  const win = windows.get(noteId);
+  const config = notesConfig.notes.find(n => n.id === noteId);
+  if (win && config && config.collapsed) {
+    win.setSize(config.width || 320, config.expandedHeight || 420, true); // smooth animate on macOS
+  }
+});
+
+ipcMain.handle('temp-collapse-window', (event, noteId) => {
+  const win = windows.get(noteId);
+  const config = notesConfig.notes.find(n => n.id === noteId);
+  if (win && config && config.collapsed) {
+    win.setSize(config.width || 320, 44, true); // smooth animate on macOS
+  }
+});
+
+
 ipcMain.handle('create-new-note', () => {
   const newId = `note-${Date.now()}`;
   const newConfig = createDefaultNoteConfig(newId);
@@ -228,6 +304,35 @@ ipcMain.handle('delete-note', (event, noteId) => {
   if (win) {
     win.close();
   }
+
+  // Save note to trash before deleting (only if it has text content)
+  const noteToDelete = notesConfig.notes.find(n => n.id === noteId);
+  if (noteToDelete) {
+    const hasText = noteToDelete.noteText && noteToDelete.noteText.trim().length > 0;
+    if (hasText) {
+      if (!notesConfig.global) {
+        notesConfig.global = {};
+      }
+      if (!notesConfig.global.trash) {
+        notesConfig.global.trash = [];
+      }
+      
+      // Add deleted timestamp
+      const trashItem = {
+        ...noteToDelete,
+        deletedAt: Date.now()
+      };
+      
+      // Prepend to trash list
+      notesConfig.global.trash.unshift(trashItem);
+      
+      // Cap trash at 20 items
+      if (notesConfig.global.trash.length > 20) {
+        notesConfig.global.trash.pop();
+      }
+    }
+  }
+
   notesConfig.notes = notesConfig.notes.filter(n => n.id !== noteId);
   saveConfig();
   updateDockVisibility();
@@ -236,6 +341,30 @@ ipcMain.handle('delete-note', (event, noteId) => {
   if (notesConfig.notes.length === 0) {
     app.quit();
   }
+});
+
+ipcMain.handle('restore-note', (event, noteId) => {
+  if (notesConfig.global && notesConfig.global.trash) {
+    const index = notesConfig.global.trash.findIndex(n => n.id === noteId);
+    if (index !== -1) {
+      const restored = notesConfig.global.trash[index];
+      delete restored.deletedAt;
+      
+      // Ensure the note isn't already active
+      if (!notesConfig.notes.some(n => n.id === noteId)) {
+        notesConfig.notes.push(restored);
+      }
+      
+      // Remove from trash
+      notesConfig.global.trash.splice(index, 1);
+      
+      saveConfig();
+      updateDockVisibility();
+      createNoteWindow(noteId);
+      return true;
+    }
+  }
+  return false;
 });
 
 // App Lifecycle
