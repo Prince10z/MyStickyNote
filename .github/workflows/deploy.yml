@@ -37,7 +37,8 @@ jobs:
               npm run build
 
               echo 'Restarting PM2...'
-              pm2 restart mystickynote-landing || pm2 start npm --name mystickynote-landing -- start
+              pm2 delete mystickynote-landing || true
+              pm2 start npm --name mystickynote-landing -- start
 
               pm2 save
 
