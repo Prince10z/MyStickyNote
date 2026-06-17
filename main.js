@@ -1,4 +1,5 @@
 const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 
@@ -26,6 +27,34 @@ function loadEnv() {
   }
 }
 loadEnv();
+
+// Configure auto-updater
+autoUpdater.autoDownload = true;
+
+autoUpdater.on('checking-for-update', () => {
+  console.log('[UPDATER LOG] Checking for updates...');
+});
+
+autoUpdater.on('update-available', (info) => {
+  console.log(`[UPDATER LOG] Update available: Version ${info.version}`);
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  console.log('[UPDATER LOG] Update not available.');
+});
+
+autoUpdater.on('error', (err) => {
+  console.error('[UPDATER ERROR] Error in auto-updater:', err);
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  console.log(`[UPDATER LOG] Downloading update: ${Math.round(progressObj.percent)}%`);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  console.log('[UPDATER LOG] Update downloaded. Will install on restart.');
+  autoUpdater.quitAndInstall();
+});
 
 const CONFIG_PATH = path.join(app.getPath('userData'), 'sticky-notes.json');
 
@@ -198,7 +227,15 @@ function createNoteWindow(noteId) {
     windows.delete(noteId);
   });
 
-  win.loadFile(path.join(__dirname, 'renderer', 'index.html'), { query: { id: noteId } });
+  const remoteUrl = process.env.APP_REMOTE_URL;
+  if (remoteUrl) {
+    console.log(`[MAIN LOG] Loading remote URL for note ${noteId}: ${remoteUrl}`);
+    win.loadURL(`${remoteUrl}?id=${noteId}`, {
+      extraHeaders: 'pragma: no-cache\r\ncache-control: no-cache\r\n'
+    });
+  } else {
+    win.loadFile(path.join(__dirname, 'renderer', 'index.html'), { query: { id: noteId } });
+  }
   windows.set(noteId, win);
 }
 
@@ -445,6 +482,13 @@ ipcMain.handle('restore-note', (event, noteId) => {
 app.whenReady().then(() => {
   loadConfig();
   updateDockVisibility();
+  
+  // Check for updates automatically on startup
+  try {
+    autoUpdater.checkForUpdatesAndNotify();
+  } catch (err) {
+    console.error('[UPDATER ERROR] Failed to check for updates:', err);
+  }
   
   if (process.platform === 'darwin') {
     try {

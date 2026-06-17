@@ -15,6 +15,13 @@
   },
   "build": {
     "appId": "com.prince10z.mystickynote",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "prince10z",
+        "repo": "MyStickyNote"
+      }
+    ],
     "mac": {
       "icon": "assets/icon.png",
       "category": "public.app-category.productivity"
@@ -22,5 +29,8 @@
     "win": {
       "icon": "assets/icon.png"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }
