@@ -72,13 +72,29 @@ export async function GET(
     const filePath = path.join(distDir, matchedFile);
     const fileStats = fs.statSync(filePath);
 
-    // Create a Node.js readable stream and convert it to a Web ReadableStream
-    const nodeStream = fs.createReadStream(filePath);
-    const webStream = Readable.toWeb(nodeStream);
+    const contentType = matchedFile.endsWith(".zip")
+      ? "application/zip"
+      : matchedFile.endsWith(".dmg")
+      ? "application/x-apple-diskimage"
+      : matchedFile.endsWith(".exe")
+      ? "application/x-msdownload"
+      : "application/octet-stream";
 
-    return new Response(webStream as any, {
+    const nodeStream = fs.createReadStream(filePath);
+    const webStream = new ReadableStream({
+      start(controller) {
+        nodeStream.on("data", (chunk) => controller.enqueue(chunk));
+        nodeStream.on("end", () => controller.close());
+        nodeStream.on("error", (err) => controller.error(err));
+      },
+      cancel() {
+        nodeStream.destroy();
+      },
+    });
+
+    return new Response(webStream, {
       headers: {
-        "Content-Type": "application/octet-stream",
+        "Content-Type": contentType,
         "Content-Disposition": `attachment; filename="${matchedFile}"`,
         "Content-Length": fileStats.size.toString(),
       },
