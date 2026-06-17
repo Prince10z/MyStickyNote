@@ -1,7 +1,7 @@
 import type { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://mystickynote.app";
+  const baseUrl = "https://mystickynote.com";
   const lastModified = new Date();
 
   return [

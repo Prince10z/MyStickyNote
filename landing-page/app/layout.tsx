@@ -3,7 +3,7 @@ import "./globals.css";
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://mystickynote.app"),
+  metadataBase: new URL("https://mystickynote.com"),
   title: {
     default: "MyStickyNote — Free AI Desktop Sticky Notes for Mac & Windows",
     template: "%s | MyStickyNote",
@@ -40,13 +40,13 @@ export const metadata: Metadata = {
     "my sticky note",
   ],
   alternates: {
-    canonical: "https://mystickynote.app",
+    canonical: "https://mystickynote.com",
   },
   openGraph: {
     title: "MyStickyNote — Free AI Desktop Sticky Notes for Mac & Windows",
     description:
       "Pin AI-powered sticky notes on your screen. Always-on-top, auto-dim, focus timers, and DeepSeek/Gemini/ChatGPT integration. Free & open source.",
-    url: "https://mystickynote.app",
+    url: "https://mystickynote.com",
     siteName: "MyStickyNote",
     locale: "en_US",
     type: "website",
