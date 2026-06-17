@@ -32,6 +32,9 @@ jobs:
               echo 'Installing dependencies...'
               npm install
 
+              echo 'Building desktop applications...'
+              npm run build
+
               if [ -d landing-page/app ] || [ -d landing-page/pages ]; then
                 echo 'Building landing page...'
                 cd landing-page
