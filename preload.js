@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('noteAPI', {
   deleteNote: (noteId) => ipcRenderer.invoke('delete-note', noteId),
   restoreNote: (noteId) => ipcRenderer.invoke('restore-note', noteId),
   trackEvent: (eventName, params) => ipcRenderer.invoke('track-event', eventName, params),
+  onPinStateChanged: (callback) => ipcRenderer.on('pin-state-changed', (event, isPinned) => callback(isPinned)),
   logError: (err) => ipcRenderer.send('log-error', err),
   logMsg: (msg) => ipcRenderer.send('log-msg', msg)
 });

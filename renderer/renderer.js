@@ -292,6 +292,19 @@ async function init() {
   globalConfig = await window.noteAPI.getGlobalConfig();
   initAISettings();
   initAlarmSelects();
+
+  // Listen for pin state changes from keyboard shortcuts
+  if (window.noteAPI.onPinStateChanged) {
+    window.noteAPI.onPinStateChanged((isPinned) => {
+      noteConfig.alwaysOnTop = isPinned;
+      settingAlwaysOnTop.checked = isPinned;
+      if (isPinned) {
+        btnPin.classList.add('active-pin');
+      } else {
+        btnPin.classList.remove('active-pin');
+      }
+    });
+  }
 }
 
 // Debounce save function to reduce filesystem write load

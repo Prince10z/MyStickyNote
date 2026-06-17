@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, globalShortcut } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
@@ -504,6 +504,79 @@ app.whenReady().then(() => {
     createNoteWindow(note.id);
   });
 
+  // Register global keyboard shortcuts
+  try {
+    // Cmd+N / Ctrl+N: Create new note
+    globalShortcut.register(process.platform === 'darwin' ? 'Command+N' : 'Control+N', () => {
+      const newId = `note-${Date.now()}`;
+      const newConfig = createDefaultNoteConfig(newId);
+      const focusedWin = BrowserWindow.getFocusedWindow();
+      if (focusedWin) {
+        const bounds = focusedWin.getBounds();
+        newConfig.x = bounds.x + 30;
+        newConfig.y = bounds.y + 30;
+      }
+      notesConfig.notes.push(newConfig);
+      saveConfig();
+      updateDockVisibility();
+      createNoteWindow(newId);
+      console.log('[SHORTCUT] Created new note via keyboard shortcut');
+    });
+
+    // Cmd+W / Ctrl+W: Close focused note
+    globalShortcut.register(process.platform === 'darwin' ? 'Command+W' : 'Control+W', () => {
+      const focusedWin = BrowserWindow.getFocusedWindow();
+      if (focusedWin) {
+        // Find the noteId for this window
+        for (const [noteId, win] of windows.entries()) {
+          if (win === focusedWin) {
+            win.close();
+            notesConfig.notes = notesConfig.notes.filter(n => n.id !== noteId);
+            saveConfig();
+            updateDockVisibility();
+            if (notesConfig.notes.length === 0) {
+              app.quit();
+            }
+            console.log(`[SHORTCUT] Closed note ${noteId} via keyboard shortcut`);
+            break;
+          }
+        }
+      }
+    });
+
+    // Cmd+Shift+P / Ctrl+Shift+P: Toggle pin on focused note
+    globalShortcut.register(process.platform === 'darwin' ? 'Command+Shift+P' : 'Control+Shift+P', () => {
+      const focusedWin = BrowserWindow.getFocusedWindow();
+      if (focusedWin) {
+        for (const [noteId, win] of windows.entries()) {
+          if (win === focusedWin) {
+            const config = notesConfig.notes.find(n => n.id === noteId);
+            if (config) {
+              config.alwaysOnTop = !config.alwaysOnTop;
+              saveConfig();
+              updateDockVisibility();
+              if (config.alwaysOnTop) {
+                win.setAlwaysOnTop(true, 'status', 1);
+                win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true });
+              } else {
+                win.setAlwaysOnTop(false);
+                win.setVisibleOnAllWorkspaces(false, { skipTransformProcessType: true });
+              }
+              // Notify renderer to update UI
+              win.webContents.send('pin-state-changed', config.alwaysOnTop);
+              console.log(`[SHORTCUT] Toggled pin for ${noteId} to ${config.alwaysOnTop}`);
+            }
+            break;
+          }
+        }
+      }
+    });
+
+    console.log('[MAIN LOG] Global keyboard shortcuts registered');
+  } catch (err) {
+    console.error('[MAIN ERROR] Failed to register keyboard shortcuts:', err);
+  }
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       loadConfig();
@@ -515,6 +588,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
+  globalShortcut.unregisterAll();
   app.quit();
 });
 

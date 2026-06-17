@@ -263,46 +263,53 @@ export default function Home() {
         </div>
       </section>
 
-      {/* --- Testimonials Section --- */}
+      {/* --- Open Source Community Section --- */}
       <section className="container testimonials-section">
-        <div className="section-tagline">Loved by Developers</div>
-        <h2 className="section-title">What Users Are Saying</h2>
+        <div className="section-tagline">Built in the Open</div>
+        <h2 className="section-title">Open Source & Community Driven</h2>
         <div className="testimonials-grid">
           <div className="testimonial-card">
-            <p className="testimonial-text">
-              "It sits perfectly in my screen corner, auto-dims when I focus on coding, and the DeepSeek R1 reasoning helps me verify my logic steps instantly."
-            </p>
-            <div className="testimonial-author">
-              <div className="testimonial-avatar">A</div>
-              <div className="testimonial-info">
-                <h4>Alex Rivera</h4>
-                <p>Full-Stack Engineer</p>
-              </div>
+            <div className="feature-icon-wrapper" style={{ margin: "0 auto 12px" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path>
+              </svg>
             </div>
+            <h3 className="feature-card-title">100% Open Source</h3>
+            <p className="feature-card-desc">
+              Every line of code is public on GitHub. Fork it, customize it, contribute to it — this app belongs to the community.
+            </p>
+            <a href="https://github.com/Prince10z/MyStickyNote" target="_blank" rel="noopener noreferrer" className="btn-landing btn-landing-secondary" style={{ marginTop: "12px", fontSize: "12px", padding: "10px 20px" }} onClick={() => trackSiteEvent("click_github")}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" style={{ marginRight: 6 }}>
+                <path d="M15 22v-4a4.8 4.8 0 0 0-1-3.5c3 0 6-2 6-5.5.08-1.25-.27-2.48-1-3.5.28-1.15.28-2.35 0-3.5 0 0-1 0-3 1.5-2.64-.5-5.36-.5-8 0C6 2 5 2 5 2c-.3 1.15-.3 2.35 0 3.5A5.403 5.403 0 0 0 4 9c0 3.5 3 5.5 6 5.5-.39.49-.68 1.05-.85 1.65-.17.6-.22 1.23-.15 1.85v4"></path>
+                <path d="M9 18c-4.51 2-5-2-7-2"></path>
+              </svg>
+              View on GitHub
+            </a>
           </div>
           <div className="testimonial-card">
-            <p className="testimonial-text">
-              "Finally, a desktop sticky note app that actually stays on top of full-screen IDEs on macOS! The built-in Pomodoro timer is a game changer."
-            </p>
-            <div className="testimonial-author">
-              <div className="testimonial-avatar">M</div>
-              <div className="testimonial-info">
-                <h4>Marcus Chen</h4>
-                <p>iOS & Backend Developer</p>
-              </div>
+            <div className="feature-icon-wrapper" style={{ margin: "0 auto 12px" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
             </div>
+            <h3 className="feature-card-title">Privacy by Design</h3>
+            <p className="feature-card-desc">
+              No accounts, no cloud servers, no telemetry. Your notes and API keys never leave your machine. Verify it yourself in the source code.
+            </p>
           </div>
           <div className="testimonial-card">
-            <p className="testimonial-text">
-              "I love that my API keys and notes are saved 100% locally. Zero cloud subscriptions, zero tracking. Extremely lightweight and beautiful."
-            </p>
-            <div className="testimonial-author">
-              <div className="testimonial-avatar">S</div>
-              <div className="testimonial-info">
-                <h4>Sarah Jenkins</h4>
-                <p>Data Scientist</p>
-              </div>
+            <div className="feature-icon-wrapper" style={{ margin: "0 auto 12px" }}>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+                <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              </svg>
             </div>
+            <h3 className="feature-card-title">Built for Developers</h3>
+            <p className="feature-card-desc">
+              Created by a developer who was tired of clunky note apps hiding behind full-screen IDEs. Contributions, issues, and feature requests are welcome.
+            </p>
           </div>
         </div>
       </section>
@@ -442,6 +449,30 @@ export default function Home() {
           <p className="system-reqs">
             Supports macOS 11.0 Big Sur or later (Apple Silicon/M1/M2/M3/Intel) and Windows 10/11 x64.
           </p>
+
+          <div className="gatekeeper-notice" style={{
+            marginTop: "20px",
+            padding: "16px 20px",
+            background: "rgba(0,0,0,0.06)",
+            borderRadius: "12px",
+            fontSize: "12px",
+            lineHeight: "1.6",
+            textAlign: "left",
+            maxWidth: "520px",
+            margin: "20px auto 0"
+          }}>
+            <strong style={{ display: "flex", alignItems: "center", gap: "6px", marginBottom: "8px", fontSize: "13px" }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              </svg>
+              macOS Users: Opening an Unsigned App
+            </strong>
+            <span style={{ opacity: 0.85 }}>
+              Since MyStickyNote is a free, open-source app distributed outside the Mac App Store, macOS Gatekeeper may show a security warning on first launch.
+              To open it: <strong>Right-click</strong> (or Control-click) the app → click <strong>Open</strong> → click <strong>Open</strong> again.
+              Alternatively, go to <strong>System Settings → Privacy &amp; Security</strong> and click <strong>Open Anyway</strong>.
+            </span>
+          </div>
         </div>
       </section>
 
