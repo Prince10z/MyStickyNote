@@ -1,97 +1,47 @@
 name: Deploy Landing Page to Ubuntu Server
 
 on:
-  push:
-    branches:
-      - main # Trigger deployment on push to main branch
-  workflow_dispatch: # Allow manual trigger from GitHub UI
+push:
+branches:
+- main
+workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+deploy:
+runs-on: ubuntu-latest
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'npm'
-          cache-dependency-path: 'landing-page/package-lock.json'
+```
+steps:
+  - name: Install sshpass
+    run: |
+      sudo apt-get update
+      sudo apt-get install -y sshpass
 
-      - name: Sync Desktop Renderer to Landing Page App Route
-        run: |
-          echo "Syncing desktop renderer frontend to landing page public directory..."
-          mkdir -p landing-page/public/app
-          # Delete old contents to ensure an exact sync
-          rm -rf landing-page/public/app/*
-          # Copy latest files from the desktop app's renderer directory
-          cp -r renderer/* landing-page/public/app/
+  - name: Deploy and Build on Server
+    run: |
+      sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
+        -o StrictHostKeyChecking=no \
+        -p ${{ secrets.SSH_PORT }} \
+        ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          set -e
 
-      - name: Install Dependencies
-        run: |
+          echo 'Navigating to project...'
+          cd /var/www/mystickynote/MyStickyNote
+
+          echo 'Pulling latest code...'
+          git pull origin main
+
+          echo 'Building landing page...'
           cd landing-page
+
           npm ci
-
-      - name: Build Next.js Landing Page
-        env:
-          NEXT_PUBLIC_GA_ID: ${{ secrets.NEXT_PUBLIC_GA_ID }}
-        run: |
-          cd landing-page
           npm run build
 
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: nextjs-build
-          path: |
-            landing-page/.next
-            landing-page/public
-            landing-page/package.json
-            landing-page/package-lock.json
-            landing-page/next.config.mjs
+          echo 'Restarting PM2...'
+          pm2 restart mystickynote-landing || pm2 start npm --name mystickynote-landing -- start
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download Build Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: nextjs-build
-          path: landing-page
+          pm2 save
 
-      - name: Install sshpass
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y sshpass
-
-      - name: Prepare Deployment Directory
-        run: |
-          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
-            -o StrictHostKeyChecking=no \
-            -p ${{ secrets.SSH_PORT || 22 }} \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
-            "mkdir -p /var/www/mystickynote/MyStickyNote/landing-page"
-
-      - name: Deploy built files via rsync
-        run: |
-          sshpass -p "${{ secrets.SSH_PASSWORD }}" rsync -avz \
-            -e "ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT || 22 }}" \
-            --exclude 'node_modules' \
-            --delete \
-            landing-page/ \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/mystickynote/MyStickyNote/landing-page/
-
-      - name: Install dependencies and restart PM2
-        run: |
-          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
-            -o StrictHostKeyChecking=no \
-            -p ${{ secrets.SSH_PORT || 22 }} \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-              cd /var/www/mystickynote/MyStickyNote/landing-page &&
-              npm install --omit=dev &&
-              pm2 restart mystickynote-landing || pm2 start npm --name mystickynote-landing -- start &&
-              pm2 save
-            "
+          echo 'Deployment completed successfully!'
+        "
+```
