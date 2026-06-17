@@ -13,15 +13,41 @@ export async function GET(
     return new NextResponse("Platform not supported. Must be 'mac' or 'windows'.", { status: 400 });
   }
 
-  // Resolve the dist directory at the project root
-  const distDir = path.join(process.cwd(), "..", "dist");
+  // Define potential directories containing the installers
+  const searchDirs = [
+    path.join(process.cwd(), "..", "dist"),                     // Root dist folder (if running inside MyStickyNote/landing-page)
+    path.join(process.cwd(), "..", "MyStickyNote", "dist"),     // Root dist folder (if running inside standalone landing-page next to MyStickyNote)
+    path.join(process.cwd(), "public", "downloads"),           // Next.js public/downloads folder (fallback)
+    path.join(process.cwd(), "public"),                         // Next.js public folder (fallback)
+  ];
+
+  let distDir = "";
+  let files: string[] = [];
+
+  // Find the first directory that exists and has files
+  for (const dir of searchDirs) {
+    if (fs.existsSync(dir)) {
+      try {
+        const dirFiles = fs.readdirSync(dir);
+        if (dirFiles.length > 0) {
+          distDir = dir;
+          files = dirFiles;
+          break;
+        }
+      } catch (err) {
+        console.warn(`Failed to read directory: ${dir}`, err);
+      }
+    }
+  }
+
+  if (!distDir) {
+    return new NextResponse(
+      `Release directory not found on server. Checked paths:\n${searchDirs.join("\n")}\n\nPlease create the 'dist/' folder in one of the locations above on the server and upload your installer files.`,
+      { status: 404 }
+    );
+  }
 
   try {
-    if (!fs.existsSync(distDir)) {
-      return new NextResponse(`Release directory not found on server. Platform: ${platform}`, { status: 404 });
-    }
-
-    const files = fs.readdirSync(distDir);
     let matchedFile = "";
 
     if (platform === "mac") {
@@ -37,7 +63,10 @@ export async function GET(
     }
 
     if (!matchedFile) {
-      return new NextResponse(`No installer file found for ${platform} in the release folder.`, { status: 404 });
+      return new NextResponse(
+        `No installer file found for ${platform} in release folder: ${distDir}`,
+        { status: 404 }
+      );
     }
 
     const filePath = path.join(distDir, matchedFile);

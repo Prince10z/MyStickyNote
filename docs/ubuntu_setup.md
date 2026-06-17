@@ -162,3 +162,26 @@ pm2 start ecosystem.config.js --env production
 pm2 save
 ```
 Now, any subsequent git pushes to `main` will compile the landing page, sync the desktop renderer frontend to `/app`, and perform a zero-downtime reload automatically!
+
+---
+
+## Step 9: Upload Desktop Client Installers
+
+Because the built desktop application installers (located in the root `dist/` directory, e.g. `smart-sticky-note-1.0.0-arm64.dmg` and Windows `.exe` files) are listed in `.gitignore`, they are not pushed to GitHub and therefore will not be deployed by the GitHub Actions pipeline.
+
+To make them downloadable from the landing page, you must upload them to the server:
+
+1. **Create the release directory on the server** (if not already created):
+   ```bash
+   mkdir -p /var/www/mystickynote/MyStickyNote/dist
+   ```
+
+2. **Upload the files from your local machine to the server**:
+   From your local terminal, use `scp` (or your preferred file transfer client like Cyberduck or FileZilla) to copy the built files to the server's `dist/` folder:
+   ```bash
+   # Example copying macOS dmg (replace with your server IP and credentials):
+   scp -P 22 ./dist/smart-sticky-note-1.0.0-arm64.dmg ubuntu@your-server-ip:/var/www/mystickynote/MyStickyNote/dist/
+   ```
+
+Once uploaded to the `/var/www/mystickynote/MyStickyNote/dist` directory on the server, the landing page's `/downloads/mac` and `/downloads/windows` endpoints will automatically detect, resolve, and download the correct installer file!
+
