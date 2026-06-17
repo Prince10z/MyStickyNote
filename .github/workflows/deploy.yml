@@ -1,50 +1,47 @@
 name: Deploy Landing Page to Ubuntu Server
 
 on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+push:
+branches:
+- main
+workflow_dispatch:
 
 jobs:
-  deploy:
-    runs-on: ubuntu-latest
+deploy:
+runs-on: ubuntu-latest
 
-    steps:
-      - name: Install sshpass
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y sshpass
+steps:
+  - name: Install sshpass
+    run: |
+      sudo apt-get update
+      sudo apt-get install -y sshpass
 
-      - name: Deploy and Build on Server
-        run: |
-          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
-            -o StrictHostKeyChecking=no \
-            -p ${{ secrets.SSH_PORT }} \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-              set -e
+  - name: Deploy to Server
+    run: |
+      sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
+        -o StrictHostKeyChecking=no \
+        -p ${{ secrets.SSH_PORT }} \
+        ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+          set -e
 
-              echo 'Navigating to project...'
-              cd /var/www/mystickynote/MyStickyNote
+          cd /var/www/mystickynote/MyStickyNote
 
-              echo 'Pulling latest code...'
-              git pull origin main
+          echo 'Pulling latest code...'
+          git pull origin main
 
-              echo 'Building desktop applications...'
-              npm ci
-              npm run build
+          echo 'Installing dependencies...'
+          npm install
 
-              echo 'Building landing page...'
-              cd landing-page
+          if [ -d landing-page/app ] || [ -d landing-page/pages ]; then
+            echo 'Building landing page...'
+            cd landing-page
+            npm install
+            npm run build
 
-              npm ci
-              npm run build
-
-              echo 'Restarting PM2...'
-              pm2 delete mystickynote-landing || true
-              pm2 start npm --name mystickynote-landing -- start
-
-              pm2 save
-
-              echo 'Deployment completed successfully!'
-            "
+            echo 'Restarting PM2...'
+            pm2 restart mystickynote-landing || pm2 start npm --name mystickynote-landing -- start
+            pm2 save
+          else
+            echo 'No Next.js app found in landing-page. Skipping build.'
+          fi
+        "
