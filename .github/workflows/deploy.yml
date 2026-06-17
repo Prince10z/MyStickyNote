@@ -50,7 +50,6 @@ jobs:
             landing-page/public
             landing-page/package.json
             landing-page/package-lock.json
-            landing-page/ecosystem.config.js
             landing-page/next.config.mjs
 
   deploy:
@@ -65,30 +64,34 @@ jobs:
 
       - name: Install sshpass
         run: |
-          sudo apt-get update && sudo apt-get install -y sshpass
+          sudo apt-get update
+          sudo apt-get install -y sshpass
 
       - name: Prepare Deployment Directory
         run: |
-          echo "Creating target directory on remote server if it doesn't exist..."
-          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT || 22 }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p /var/www/mystickynote/landing-page"
+          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
+            -o StrictHostKeyChecking=no \
+            -p ${{ secrets.SSH_PORT || 22 }} \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "mkdir -p /var/www/mystickynote/MyStickyNote/landing-page"
 
       - name: Deploy built files via rsync
         run: |
-          echo "Deploying landing page files..."
-          # Deploy Next.js build, public files, configuration and packages
-          sshpass -p "${{ secrets.SSH_PASSWORD }}" rsync -avz -e "ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT || 22 }}" \
+          sshpass -p "${{ secrets.SSH_PASSWORD }}" rsync -avz \
+            -e "ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT || 22 }}" \
             --exclude 'node_modules' \
-            --exclude '.git' \
-            --exclude '.github' \
             --delete \
             landing-page/ \
-            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/mystickynote/landing-page/
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/mystickynote/MyStickyNote/landing-page/
 
-      - name: Install server-side dependencies and restart PM2
+      - name: Install dependencies and restart PM2
         run: |
-          echo "Installing production node_modules and reloading PM2 on Ubuntu server..."
-          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh -o StrictHostKeyChecking=no -p ${{ secrets.SSH_PORT || 22 }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
-            cd /var/www/mystickynote/landing-page &&
-            npm install --production &&
-            pm2 startOrReload ecosystem.config.js --env production
-          "
+          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
+            -o StrictHostKeyChecking=no \
+            -p ${{ secrets.SSH_PORT || 22 }} \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "
+              cd /var/www/mystickynote/MyStickyNote/landing-page &&
+              npm install --omit=dev &&
+              pm2 restart mystickynote-landing || pm2 start npm --name mystickynote-landing -- start &&
+              pm2 save
+            "
