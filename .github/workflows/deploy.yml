@@ -32,19 +32,17 @@ jobs:
               echo 'Installing dependencies...'
               npm install
 
-              echo 'Building desktop applications...'
-              npm run build
-
               if [ -d landing-page/app ] || [ -d landing-page/pages ]; then
                 echo 'Building landing page...'
                 cd landing-page
                 npm install
                 npm run build
 
-                echo 'Restarting PM2...'
-                pm2 restart mystickynote-landing || pm2 start npm --name mystickynote-landing -- start
+                pm2 restart mystickynote-landing || \
+                pm2 start npm --name mystickynote-landing -- start
+
                 pm2 save
               else
-                echo 'No Next.js app found in landing-page. Skipping build.'
+                echo 'No Next.js app found. Skipping landing page build.'
               fi
             "
