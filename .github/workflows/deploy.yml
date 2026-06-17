@@ -30,6 +30,10 @@ jobs:
               echo 'Pulling latest code...'
               git pull origin main
 
+              echo 'Building desktop applications...'
+              npm ci
+              npm run build
+
               echo 'Building landing page...'
               cd landing-page
 
