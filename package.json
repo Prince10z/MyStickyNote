@@ -31,11 +31,11 @@
       }
     ],
     "mac": {
-      "icon": "assets/icon.png",
+      "icon": "assets/icon.icns",
       "category": "public.app-category.productivity"
     },
     "win": {
-      "icon": "assets/icon.png"
+      "icon": "assets/icon.ico"
     }
   },
   "dependencies": {
