@@ -1,0 +1,93 @@
+name: Build & Deploy Desktop App
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'main.js'
+      - 'preload.js'
+      - 'renderer/**'
+      - 'assets/**'
+      - 'package.json'
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build desktop apps (macOS + Windows)
+        run: npm run build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: List built files
+        run: ls -la dist/
+
+      - name: Install sshpass
+        run: brew install hudochenkov/sshpass/sshpass
+
+      - name: Upload installers to server
+        run: |
+          # Create dist directory on server if it doesn't exist
+          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
+            -o StrictHostKeyChecking=no \
+            -p ${{ secrets.SSH_PORT }} \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "mkdir -p /var/www/mystickynote/MyStickyNote/dist"
+
+          # Find and upload the .dmg file (macOS installer)
+          DMG_FILE=$(ls dist/*.dmg 2>/dev/null | head -1)
+          if [ -n "$DMG_FILE" ]; then
+            echo "Uploading macOS installer: $DMG_FILE"
+            sshpass -p "${{ secrets.SSH_PASSWORD }}" scp \
+              -o StrictHostKeyChecking=no \
+              -P ${{ secrets.SSH_PORT }} \
+              "$DMG_FILE" \
+              ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/mystickynote/MyStickyNote/dist/
+          fi
+
+          # Find and upload the .zip file (macOS alternate)
+          ZIP_FILE=$(ls dist/*-mac.zip 2>/dev/null | head -1)
+          if [ -n "$ZIP_FILE" ]; then
+            echo "Uploading macOS zip: $ZIP_FILE"
+            sshpass -p "${{ secrets.SSH_PASSWORD }}" scp \
+              -o StrictHostKeyChecking=no \
+              -P ${{ secrets.SSH_PORT }} \
+              "$ZIP_FILE" \
+              ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/mystickynote/MyStickyNote/dist/
+          fi
+
+          # Find and upload the .exe file (Windows installer)
+          EXE_FILE=$(ls dist/*.exe 2>/dev/null | head -1)
+          if [ -n "$EXE_FILE" ]; then
+            echo "Uploading Windows installer: $EXE_FILE"
+            sshpass -p "${{ secrets.SSH_PASSWORD }}" scp \
+              -o StrictHostKeyChecking=no \
+              -P ${{ secrets.SSH_PORT }} \
+              "$EXE_FILE" \
+              ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/var/www/mystickynote/MyStickyNote/dist/
+          fi
+
+          echo "✅ Desktop app installers uploaded to server!"
+
+      - name: Verify uploads on server
+        run: |
+          sshpass -p "${{ secrets.SSH_PASSWORD }}" ssh \
+            -o StrictHostKeyChecking=no \
+            -p ${{ secrets.SSH_PORT }} \
+            ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} \
+            "echo '📦 Files in dist/:' && ls -lh /var/www/mystickynote/MyStickyNote/dist/"
