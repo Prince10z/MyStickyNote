@@ -107,16 +107,16 @@ export default function RootLayout({
     },
     description:
       "A free, open-source desktop sticky note app with AI integration (DeepSeek R1, Google Gemini, ChatGPT), always-on-top mode, auto-dim, focus timers, alarms, and stopwatch.",
-    downloadUrl: "https://mystickynote.app/#download",
+    downloadUrl: "https://mystickynote.com/#download",
     softwareVersion: "1.0.0",
     author: {
       "@type": "Person",
       name: "Piyush Thakur",
       url: "https://www.linkedin.com/in/piyush-thakur10z/",
     },
-    url: "https://mystickynote.app",
-    image: "https://mystickynote.app/icon.png",
-    screenshot: "https://mystickynote.app/og-image.png",
+    url: "https://mystickynote.com",
+    image: "https://mystickynote.com/icon.png",
+    screenshot: "https://mystickynote.com/og-image.png",
     featureList:
       "AI Integration, Always-on-Top, Auto-Dim, Focus Timer, Alarm, Stopwatch, Multiple Themes, Trash Recovery, Keyboard Shortcuts",
     isAccessibleForFree: true,
@@ -176,7 +176,7 @@ export default function RootLayout({
     "@context": "https://schema.org",
     "@type": "WebSite",
     name: "MyStickyNote",
-    url: "https://mystickynote.app",
+    url: "https://mystickynote.com",
     description:
       "Free, open-source AI-powered desktop sticky notes for macOS and Windows.",
   };
