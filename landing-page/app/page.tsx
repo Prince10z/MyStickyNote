@@ -30,7 +30,7 @@ export default function Home() {
 
   const handleDownload = (platform: "mac" | "windows") => {
     trackSiteEvent("download_app", { platform });
-    alert(`Downloading MyStickyNote for ${platform === "mac" ? "macOS (dmg)" : "Windows (exe)"}...`);
+    window.location.href = `/downloads/${platform}`;
   };
 
   return (
