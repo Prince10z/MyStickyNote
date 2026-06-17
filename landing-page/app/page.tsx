@@ -453,7 +453,10 @@ export default function Home() {
             <span>MyStickyNote</span>
           </div>
           <p style={{ fontSize: "11px", letterSpacing: "0.03em" }}>
-            © 2026 MyStickyNote. Made for developers who write notes.
+            © 2026 MyStickyNote. Created by <a href="https://www.linkedin.com/in/piyush-thakur10z/" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline", color: "inherit" }}>Piyush Thakur</a> (<a href="https://piyushportfolio.fastdeploy.in/" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline", color: "inherit" }}>Portfolio</a>). Made for developers who write notes.
+          </p>
+          <p style={{ fontSize: "11px", letterSpacing: "0.03em", marginTop: "4px", opacity: 0.7 }}>
+            Need support? Contact at <a href="mailto:piyush22122@gmail.com" style={{ textDecoration: "underline", color: "inherit" }}>piyush22122@gmail.com</a> or connect on <a href="https://www.linkedin.com/in/piyush-thakur10z/" target="_blank" rel="noopener noreferrer" style={{ textDecoration: "underline", color: "inherit" }}>LinkedIn</a>.
           </p>
         </div>
       </footer>
