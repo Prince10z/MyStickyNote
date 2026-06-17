@@ -218,6 +218,9 @@ async function init() {
   // Load Note configuration from main process
   noteConfig = await window.noteAPI.getNoteConfig(noteId);
 
+  // Track app launch via GA
+  trackAppEvent('app_launch', { theme: noteConfig.color || 'yellow' });
+
   // Apply visual theme
   document.body.className = `theme-${noteConfig.color || 'yellow'}`;
   if (noteConfig.collapsed) {
@@ -502,14 +505,19 @@ colorDots.forEach(dot => {
     document.body.className = `theme-${chosenColor}`;
     colorPalette.classList.add('hidden');
     
+    trackAppEvent('theme_change', { color: chosenColor });
     triggerStateSave();
   });
 });
 
 // Auto-save on note edit and update statistics
 noteEditor.addEventListener('input', () => {
-  triggerStateSave();
   updateEditorStats();
+  triggerStateSave();
+  if (!window.lastEditTrackTime || Date.now() - window.lastEditTrackTime > 60000) {
+    trackAppEvent('note_edit', { char_count: noteEditor.value.length });
+    window.lastEditTrackTime = Date.now();
+  }
 });
 
 /* ==========================================================================
@@ -578,6 +586,7 @@ swBtnStart.addEventListener('click', () => {
   swBtnPause.classList.remove('hidden');
   swBtnReset.classList.add('hidden');
   swBtnLap.disabled = false;
+  trackAppEvent('stopwatch_start');
 });
 
 swBtnPause.addEventListener('click', () => {
@@ -693,6 +702,7 @@ timerBtnStart.addEventListener('click', () => {
   // Buttons transition
   timerBtnStart.classList.add('hidden');
   timerBtnPause.classList.remove('hidden');
+  trackAppEvent('timer_start', { duration_sec: total });
   timerBtnReset.classList.remove('hidden');
 
   startTimer();
@@ -832,6 +842,7 @@ alarmBtnSet.addEventListener('click', () => {
   
   const alarmVal = `${hour24.toString().padStart(2, '0')}:${minuteVal}`;
   setAlarm(alarmVal);
+  trackAppEvent('alarm_set', { alarm_time: alarmVal });
 });
 
 alarmBtnCancel.addEventListener('click', cancelAlarm);
@@ -1295,6 +1306,7 @@ aiCustomInput.addEventListener('keydown', (e) => {
 async function triggerAIAction(action, customText = '') {
   const provider = globalConfig ? globalConfig.activeProvider || 'gemini' : 'gemini';
   const apiKey = globalConfig && globalConfig.providers?.[provider]?.apiKey;
+  trackAppEvent('ai_query', { provider, action });
   
   if (!apiKey) {
     alert(`Please set your API Key for ${provider.toUpperCase()} in Settings first.`);
@@ -1596,3 +1608,43 @@ btnRefreshTrash.addEventListener('click', () => {
 
 // Initialize application on load
 window.addEventListener('DOMContentLoaded', init);
+
+/* ==========================================================================
+   Google Analytics 4 (GA4) Tracking Integration (Electron file:// friendly)
+   ========================================================================== */
+function trackAppEvent(eventName, params = {}) {
+  try {
+    const measurementId = 'G-MYSN123456'; // Default GA4 ID
+    
+    let clientId = localStorage.getItem('mystickynote_ga_client_id');
+    if (!clientId) {
+      clientId = 'cid_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
+      localStorage.setItem('mystickynote_ga_client_id', clientId);
+    }
+
+    const queryParams = new URLSearchParams({
+      v: '2',
+      tid: measurementId,
+      cid: clientId,
+      en: eventName,
+      sid: clientId, // Use client ID as session ID for simplicity
+      sct: '1',
+      seg: '1',
+      _p: Math.floor(Math.random() * 10000000).toString()
+    });
+
+    // Add custom event parameters
+    Object.keys(params).forEach(key => {
+      queryParams.append(`ep.${key}`, params[key]);
+    });
+
+    fetch(`https://www.google-analytics.com/g/collect?${queryParams.toString()}`, {
+      method: 'POST',
+      mode: 'no-cors'
+    }).catch(() => {
+      // Fail silently (offline/network block)
+    });
+  } catch (err) {
+    // Ignore errors
+  }
+}

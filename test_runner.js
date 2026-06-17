@@ -14,7 +14,7 @@ const artifactsDir = '/Users/prince10z/.gemini/antigravity-ide/brain/d227a837-05
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 async function runTests() {
-  console.log('--- STARTING SMART STICKY NOTE E2E TESTS ---');
+  console.log('--- STARTING MYSTICKYNOTE E2E TESTS ---');
 
   // 1. Back up existing configuration if it exists
   let hasBackup = false;
