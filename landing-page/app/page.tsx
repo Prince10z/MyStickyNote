@@ -94,8 +94,14 @@ export default function Home() {
       {/* --- Hero Section --- */}
       <section className="container hero-section" style={{ position: "relative", zIndex: 20 }}>
         <div style={{ display: "flex", justifyContent: "center", gap: "10px", flexWrap: "wrap", marginBottom: "10px" }}>
-          <div className="glass-badge yellow">⚡ Ditch the browser tabs</div>
-          <div className="glass-badge blue">🤖 R1 Deep Thinking</div>
+          <div className="glass-badge yellow" style={{ display: "flex", alignItems: "center" }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+            Ditch the browser tabs
+          </div>
+          <div className="glass-badge blue" style={{ display: "flex", alignItems: "center" }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}><rect x="4" y="4" width="16" height="16" rx="2" ry="2"></rect><rect x="9" y="9" width="6" height="6"></rect><line x1="9" y1="1" x2="9" y2="4"></line><line x1="15" y1="1" x2="15" y2="4"></line><line x1="9" y1="20" x2="9" y2="23"></line><line x1="15" y1="20" x2="15" y2="23"></line><line x1="20" y1="9" x2="23" y2="9"></line><line x1="20" y1="15" x2="23" y2="15"></line><line x1="1" y1="9" x2="4" y2="9"></line><line x1="1" y1="15" x2="4" y2="15"></line></svg>
+            AI Deep Reasoning
+          </div>
         </div>
 
         <h1 className="hero-title">
@@ -124,8 +130,9 @@ export default function Home() {
 
       {/* --- Interactive Desktop Playground --- */}
       <section id="demo" className="container demo-section" style={{ position: "relative", zIndex: 20 }}>
-        <div className="glass-badge blue">
-          🖥️ Tactile Sandbox
+        <div className="glass-badge blue" style={{ display: "flex", alignItems: "center" }}>
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>
+          Tactile Sandbox
         </div>
         <h2 className="demo-title">Test Drive the Widget</h2>
         <p className="demo-desc">
@@ -153,7 +160,10 @@ export default function Home() {
           </div>
 
           <div className="mock-desktop-instructions">
-            <span>💡 Try setting a 5-sec Timer, or toggle 'Always on Top' in Settings!</span>
+            <span style={{ display: "inline-flex", alignItems: "center" }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6, flexShrink: 0 }}><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+              Try setting a 5-sec Timer, or toggle 'Always on Top' in Settings!
+            </span>
           </div>
         </div>
       </section>
@@ -222,8 +232,9 @@ export default function Home() {
           {/* Card 5 */}
           <div className="feature-card">
             <div className="feature-icon-wrapper">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2 2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
                 <line x1="10" y1="11" x2="10" y2="17"></line>
                 <line x1="14" y1="11" x2="14" y2="17"></line>
               </svg>
@@ -315,7 +326,7 @@ export default function Home() {
             </thead>
             <tbody>
               <tr>
-                <td><strong>AI Deep Thinking (DeepSeek/Gemini)</strong></td>
+                <td><strong>AI Deep Reasoning (R1/Gemini)</strong></td>
                 <td><span className="comparison-check">Yes (Local Keys)</span></td>
                 <td><span className="comparison-cross">No</span></td>
                 <td><span className="comparison-cross">No</span></td>
@@ -391,8 +402,9 @@ export default function Home() {
       {/* --- Download Section --- */}
       <section id="download" className="container download-section" style={{ position: "relative", zIndex: 20 }}>
         <div className="download-box">
-          <div className="glass-badge yellow" style={{ position: "absolute", top: "-18px", left: "24px", margin: 0 }}>
-            📥 Ready to Install
+          <div className="glass-badge yellow" style={{ position: "absolute", top: "-18px", left: "24px", margin: 0, display: "flex", alignItems: "center" }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 6 }}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            Ready to Install
           </div>
           <h2 className="download-title">Free & Open Source</h2>
           <p className="download-desc">

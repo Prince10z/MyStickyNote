@@ -16,6 +16,7 @@ contextBridge.exposeInMainWorld('noteAPI', {
   createNewNote: () => ipcRenderer.invoke('create-new-note'),
   deleteNote: (noteId) => ipcRenderer.invoke('delete-note', noteId),
   restoreNote: (noteId) => ipcRenderer.invoke('restore-note', noteId),
+  trackEvent: (eventName, params) => ipcRenderer.invoke('track-event', eventName, params),
   logError: (err) => ipcRenderer.send('log-error', err),
   logMsg: (msg) => ipcRenderer.send('log-msg', msg)
 });

@@ -2,6 +2,31 @@ const { app, BrowserWindow, ipcMain, screen } = require('electron');
 const path = require('path');
 const fs = require('fs');
 
+// Load environment variables from .env if it exists
+function loadEnv() {
+  const envPath = path.join(__dirname, '.env');
+  if (fs.existsSync(envPath)) {
+    try {
+      const content = fs.readFileSync(envPath, 'utf8');
+      content.split(/\r?\n/).forEach(line => {
+        const trimmed = line.trim();
+        if (trimmed && !trimmed.startsWith('#')) {
+          const parts = trimmed.split('=');
+          if (parts.length >= 2) {
+            const key = parts[0].trim();
+            const value = parts.slice(1).join('=').trim().replace(/^['"]|['"]$/g, '');
+            process.env[key] = value;
+          }
+        }
+      });
+      console.log('[MAIN LOG] Successfully loaded env variables from .env');
+    } catch (err) {
+      console.error('[MAIN ERROR] Failed to load .env file:', err);
+    }
+  }
+}
+loadEnv();
+
 const CONFIG_PATH = path.join(app.getPath('userData'), 'sticky-notes.json');
 
 // Memory storage for notes config
@@ -37,6 +62,13 @@ function loadConfig() {
 
   if (!notesConfig.global.trash) {
     notesConfig.global.trash = [];
+  }
+
+  // Ensure analyticsClientId exists
+  if (!notesConfig.global.analyticsClientId) {
+    const crypto = require('crypto');
+    notesConfig.global.analyticsClientId = crypto.randomUUID();
+    saveConfig();
   }
 
   // Create default note if list is empty
@@ -171,6 +203,48 @@ function createNoteWindow(noteId) {
 }
 
 // IPC Handlers
+ipcMain.handle('track-event', async (event, eventName, params = {}) => {
+  const measurementId = process.env.GA_MEASUREMENT_ID;
+  const apiSecret = process.env.GA_API_SECRET;
+  
+  if (!measurementId || !apiSecret) {
+    return;
+  }
+
+  const clientId = notesConfig.global?.analyticsClientId || 'default-client-id';
+  const url = `https://www.google-analytics.com/mp/collect?api_secret=${apiSecret}&measurement_id=${measurementId}`;
+  
+  const payload = {
+    client_id: clientId,
+    events: [{
+      name: eventName,
+      params: {
+        ...params,
+        engagement_time_msec: '100',
+        session_id: clientId,
+        os_name: process.platform,
+        os_arch: process.arch,
+      }
+    }]
+  };
+
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(payload)
+    });
+    
+    if (!response.ok) {
+      console.error(`[MAIN ERROR] GA Measurement Protocol request failed with status: ${response.status}`);
+    }
+  } catch (err) {
+    console.error('[MAIN ERROR] Failed to send GA event:', err);
+  }
+});
+
 ipcMain.handle('get-note-config', (event, noteId) => {
   const config = notesConfig.notes.find(n => n.id === noteId);
   return config || createDefaultNoteConfig(noteId);

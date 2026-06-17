@@ -2416,3 +2416,32 @@ h1, h2, h3, h4 {
   color: var(--site-text-secondary);
   margin: 0;
 }
+
+/* --- Mobile Responsiveness Media Queries --- */
+@media (max-width: 768px) {
+  .nav-links {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 32px !important;
+  }
+  .hero-desc {
+    font-size: 15px !important;
+    margin-bottom: 24px !important;
+  }
+  .mock-desktop {
+    height: 480px !important;
+  }
+  .sticky-widget {
+    transform: scale(0.85);
+  }
+}
+
+@media (max-width: 360px) {
+  .sticky-widget {
+    transform: scale(0.75);
+  }
+}

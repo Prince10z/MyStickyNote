@@ -330,7 +330,7 @@ async function runTests() {
     await window.click('.nav-item[data-tab="note"]');
     await window.waitForSelector('#panel-note.active');
     await window.fill('textarea#note-editor', '');
-    await delay(500); // Wait for auto-save
+    await delay(1000); // Wait for auto-save
 
     // Create a new note window (second note)
     console.log('Creating a second note (empty)...');
@@ -372,7 +372,7 @@ async function runTests() {
     await window.click('.nav-item[data-tab="note"]');
     await window.waitForSelector('#panel-note.active');
     await window.fill('textarea#note-editor', 'Delete Me Note Content');
-    await delay(500); // Wait for auto-save
+    await delay(1000); // Wait for auto-save
 
     // Create a third note window, type text, and delete it
     console.log('Creating a third note (with text)...');
@@ -387,7 +387,7 @@ async function runTests() {
     });
     
     await window3.fill('textarea#note-editor', 'Third Note Content To Trash');
-    await delay(500); // auto-save
+    await delay(1000); // auto-save
     await window3.click('#btn-delete');
     await delay(800);
 

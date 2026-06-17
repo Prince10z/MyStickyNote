@@ -1210,7 +1210,7 @@ export default function StickyNoteWidget({ theme, onThemeChange }: StickyNoteWid
                           </div>
                           <select value={deepseekModel} onChange={(e) => setDeepseekModel(e.target.value)} className="setting-select">
                             <option value="deepseek-chat">DeepSeek Chat (Default)</option>
-                            <option value="deepseek-reasoner">DeepSeek Reasoner (R1 - Deep Thinking)</option>
+                            <option value="deepseek-reasoner">DeepSeek Reasoner (R1 - Deep Reasoning)</option>
                           </select>
                         </div>
                       </div>

@@ -317,12 +317,14 @@ function triggerStateSave() {
    ========================================================================== */
 // Create New Note
 btnNew.addEventListener('click', () => {
+  trackAppEvent('note_create');
   window.noteAPI.createNewNote();
 });
 
 // Delete Current Note
 btnDelete.addEventListener('click', () => {
   if (confirm('Are you sure you want to delete this sticky note?')) {
+    trackAppEvent('note_delete');
     window.noteAPI.deleteNote(noteId);
   }
 });
@@ -337,6 +339,7 @@ btnPin.addEventListener('click', () => {
   }
   noteConfig.alwaysOnTop = isPinned;
   settingAlwaysOnTop.checked = isPinned;
+  trackAppEvent('note_pin', { active: isPinned });
   window.noteAPI.toggleAlwaysOnTop(noteId, isPinned);
 });
 
@@ -354,6 +357,7 @@ btnCollapse.addEventListener('click', async () => {
   const isCollapsed = await window.noteAPI.toggleCollapseWindow(noteId);
   noteConfig.collapsed = isCollapsed;
   document.body.classList.toggle('collapsed-note', isCollapsed);
+  trackAppEvent('note_collapse', { collapsed: isCollapsed });
 });
 
 // Double click header to collapse
@@ -372,6 +376,7 @@ if (dragHeader) {
     const isCollapsed = await window.noteAPI.toggleCollapseWindow(noteId);
     noteConfig.collapsed = isCollapsed;
     document.body.classList.toggle('collapsed-note', isCollapsed);
+    trackAppEvent('note_collapse', { collapsed: isCollapsed });
   });
 }
 
@@ -1566,6 +1571,7 @@ async function loadAndRenderTrash() {
       e.stopPropagation();
       const success = await window.noteAPI.restoreNote(note.id);
       if (success) {
+        trackAppEvent('note_restore');
         loadAndRenderTrash();
       } else {
         alert('Failed to restore note.');
@@ -1591,6 +1597,7 @@ btnClearTrash.addEventListener('click', async () => {
   if (confirm('Are you sure you want to permanently delete all notes in the trash? This action cannot be undone.')) {
     globalConfig.trash = [];
     await window.noteAPI.updateGlobalConfig(globalConfig);
+    trackAppEvent('trash_clear');
     loadAndRenderTrash();
   }
 });
@@ -1614,36 +1621,9 @@ window.addEventListener('DOMContentLoaded', init);
    ========================================================================== */
 function trackAppEvent(eventName, params = {}) {
   try {
-    const measurementId = 'G-MYSN123456'; // Default GA4 ID
-    
-    let clientId = localStorage.getItem('mystickynote_ga_client_id');
-    if (!clientId) {
-      clientId = 'cid_' + Math.random().toString(36).substring(2, 15) + '_' + Date.now();
-      localStorage.setItem('mystickynote_ga_client_id', clientId);
+    if (window.noteAPI && window.noteAPI.trackEvent) {
+      window.noteAPI.trackEvent(eventName, params).catch(() => {});
     }
-
-    const queryParams = new URLSearchParams({
-      v: '2',
-      tid: measurementId,
-      cid: clientId,
-      en: eventName,
-      sid: clientId, // Use client ID as session ID for simplicity
-      sct: '1',
-      seg: '1',
-      _p: Math.floor(Math.random() * 10000000).toString()
-    });
-
-    // Add custom event parameters
-    Object.keys(params).forEach(key => {
-      queryParams.append(`ep.${key}`, params[key]);
-    });
-
-    fetch(`https://www.google-analytics.com/g/collect?${queryParams.toString()}`, {
-      method: 'POST',
-      mode: 'no-cors'
-    }).catch(() => {
-      // Fail silently (offline/network block)
-    });
   } catch (err) {
     // Ignore errors
   }
