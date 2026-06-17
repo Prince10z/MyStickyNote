@@ -1090,12 +1090,17 @@ passwordToggles.forEach(btn => {
   btn.addEventListener('click', () => {
     const targetId = btn.dataset.target;
     const targetInput = document.getElementById(targetId);
+    const eyeIcon = btn.querySelector('.eye-icon');
+    const eyeOffIcon = btn.querySelector('.eye-off-icon');
+    
     if (targetInput.type === 'password') {
       targetInput.type = 'text';
-      btn.textContent = '🙈';
+      if (eyeIcon) eyeIcon.classList.add('hidden');
+      if (eyeOffIcon) eyeOffIcon.classList.remove('hidden');
     } else {
       targetInput.type = 'password';
-      btn.textContent = '👁️';
+      if (eyeIcon) eyeIcon.classList.remove('hidden');
+      if (eyeOffIcon) eyeOffIcon.classList.add('hidden');
     }
   });
 });
