@@ -638,7 +638,7 @@ export default function StickyNoteWidget({ theme, onThemeChange }: StickyNoteWid
           {/* --- Main Panels --- */}
           <main className="content-area">
             {/* Panel 1: Note */}
-            <section className={`panel ${activeTab === "note" ? "active" : ""}`}>
+            <section id="panel-note" className={`panel ${activeTab === "note" ? "active" : ""}`}>
               <div className="editor-toolbar">
                 <div className="toolbar-left">{charCount} chars | {getWordCount(noteText)} words</div>
                 {enableAI && (
@@ -782,7 +782,7 @@ export default function StickyNoteWidget({ theme, onThemeChange }: StickyNoteWid
             </section>
 
             {/* Panel 2: Timer */}
-            <section className={`panel ${activeTab === "timer" ? "active" : ""}`}>
+            <section id="panel-timer" className={`panel ${activeTab === "timer" ? "active" : ""}`}>
               <div className="timer-container">
                 <div className="timer-display-ring">
                   <svg className="progress-ring" width="160" height="160">
@@ -838,7 +838,7 @@ export default function StickyNoteWidget({ theme, onThemeChange }: StickyNoteWid
             </section>
 
             {/* Panel 3: Alarm */}
-            <section className={`panel ${activeTab === "alarm" ? "active" : ""}`}>
+            <section id="panel-alarm" className={`panel ${activeTab === "alarm" ? "active" : ""}`}>
               <div className="alarm-container">
                 <div className="digital-clock-container">
                   <svg className="clock-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
@@ -913,7 +913,7 @@ export default function StickyNoteWidget({ theme, onThemeChange }: StickyNoteWid
             </section>
 
             {/* Panel 4: Stopwatch */}
-            <section className={`panel ${activeTab === "stopwatch" ? "active" : ""}`}>
+            <section id="panel-stopwatch" className={`panel ${activeTab === "stopwatch" ? "active" : ""}`}>
               <div className="stopwatch-container">
                 <div className="stopwatch-display">
                   <span>{formatStopwatchTime(swTime).main}</span>
@@ -944,7 +944,7 @@ export default function StickyNoteWidget({ theme, onThemeChange }: StickyNoteWid
             </section>
 
             {/* Panel 5: Settings */}
-            <section className={`panel ${activeTab === "settings" ? "active" : ""}`}>
+            <section id="panel-settings" className={`panel ${activeTab === "settings" ? "active" : ""}`}>
               <div className="settings-container">
                 <h3 className="settings-title">Note Settings</h3>
 
@@ -1242,7 +1242,7 @@ export default function StickyNoteWidget({ theme, onThemeChange }: StickyNoteWid
             </section>
 
             {/* Panel 6: History */}
-            <section className={`panel ${activeTab === "history" ? "active" : ""}`}>
+            <section id="panel-history" className={`panel ${activeTab === "history" ? "active" : ""}`}>
               <div className="history-container">
                 <div className="history-header">
                   <h3 className="settings-title" style={{ margin: 0, border: "none", padding: 0 }}>Deleted Notes</h3>
