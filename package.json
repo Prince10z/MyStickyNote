@@ -4,15 +4,22 @@
   "description": "A smart sticky note application for desktop with always-on-top mode, timers, alarms, and stopwatch.",
   "main": "main.js",
   "scripts": {
+    "compile:electron": "esbuild src/main/recording/index.ts --bundle --platform=node --format=cjs --target=node20 --external:electron --outfile=dist-electron/recording.js",
+    "sync:web-app": "node scripts/sync-web-app.js",
+    "mock:gateway": "node scripts/mock-transcription-gateway.js",
+    "prestart": "npm run compile:electron",
     "start": "electron .",
+    "prebuild": "npm run compile:electron && npm run sync:web-app",
     "build": "rm -rf dist && electron-builder --win --x64 --mac --x64 --arm64"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
+    "@types/ws": "^8.18.1",
     "electron": "^31.0.0",
     "electron-builder": "^26.15.3",
+    "esbuild": "^0.25.5",
     "playwright": "^1.61.0"
   },
   "build": {
@@ -21,6 +28,7 @@
       "main.js",
       "preload.js",
       "renderer/**/*",
+      "dist-electron/**/*",
       "assets/**/*",
       "package.json"
     ],
@@ -33,13 +41,20 @@
     ],
     "mac": {
       "icon": "assets/icon.icns",
-      "category": "public.app-category.productivity"
+      "category": "public.app-category.productivity",
+      "hardenedRuntime": true,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "myStickynote uses your microphone only while you record a meeting.",
+        "NSAudioCaptureUsageDescription": "myStickynote captures system audio only during a recording you start.",
+        "NSScreenCaptureDescription": "myStickynote needs screen and system-audio access to transcribe the source you select."
+      }
     },
     "win": {
       "icon": "assets/icon.ico"
     }
   },
   "dependencies": {
-    "electron-updater": "^6.8.9"
+    "electron-updater": "^6.8.9",
+    "ws": "^8.18.3"
   }
 }

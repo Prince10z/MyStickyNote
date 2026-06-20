@@ -516,6 +516,51 @@
           </div>
         </div>
       </section>
+      <section id="panel-recording" class="panel">
+        <div class="recording-container">
+          <div class="recording-heading">
+            <div>
+              <span class="recording-kicker">Audio intelligence</span>
+              <h3>Live Notes</h3>
+            </div>
+            <span id="recording-status" class="recording-status idle"><span></span>Ready</span>
+          </div>
+          <label class="recording-field" for="recording-source">
+            <span>Meeting or media source</span>
+            <select id="recording-source" class="setting-select">
+              <option value="">Choose a window or screen…</option>
+            </select>
+          </label>
+          <div class="recording-options">
+            <label><input id="recording-system-audio" type="checkbox" checked disabled> System audio</label>
+            <label><input id="recording-microphone" type="checkbox"> Microphone</label>
+          </div>
+          <div id="recording-context" class="recording-context hidden"></div>
+          <div class="recording-controls">
+            <button id="recording-start" class="btn btn-primary">Start live notes</button>
+            <button id="recording-pause" class="btn btn-secondary hidden">Pause</button>
+            <button id="recording-stop" class="btn btn-danger hidden">Stop</button>
+          </div>
+          <div class="recording-transcript-card">
+            <div class="recording-transcript-header">
+              <span>Live transcript</span>
+              <span id="recording-duration">00:00</span>
+            </div>
+            <div id="recording-transcript" class="recording-transcript" aria-live="polite">
+              <div class="recording-empty">Your transcript will appear here while recording.</div>
+            </div>
+            <div class="recording-transcript-actions">
+              <button id="recording-copy" class="btn btn-secondary" disabled>Copy</button>
+              <button id="recording-insert" class="btn btn-secondary" disabled>Insert into note</button>
+            </div>
+          </div>
+          <div class="recording-summary-card">
+            <div class="recording-transcript-header"><span>Rolling summary</span><span>AI</span></div>
+            <div id="recording-summary" class="recording-summary"><span class="recording-empty">Key points, decisions, and tasks will update as the conversation develops.</span></div>
+          </div>
+          <p class="recording-consent">Only record conversations when everyone has been informed and recording is permitted.</p>
+        </div>
+      </section>
 
     </main>
 
@@ -536,6 +581,10 @@
       <button class="nav-item" data-tab="stopwatch" title="Stopwatch">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 15 15"></polyline></svg>
         <span>Watch</span>
+      </button>
+      <button class="nav-item" data-tab="recording" title="Live meeting and video notes">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"></path></svg>
+        <span>Live</span>
       </button>
       <button class="nav-item" data-tab="history" title="History (Trash/Backup)">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

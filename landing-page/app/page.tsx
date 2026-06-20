@@ -174,6 +174,30 @@ export default function Home() {
         <h2 className="section-title">Features Checklist</h2>
 
         <div className="features-grid">
+          <div className="feature-card">
+            <div className="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"/></svg>
+            </div>
+            <h3 className="feature-card-title">Live Meeting Notes</h3>
+            <p className="feature-card-desc">Choose Zoom, Teams, or Meet and turn system audio plus your microphone into a live transcript that can be dropped straight into a sticky note.</p>
+          </div>
+
+          <div className="feature-card">
+            <div className="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M22 12a10 10 0 1 1-10-10"/><path d="m22 2-10 10"/><path d="M16 2h6v6"/></svg>
+            </div>
+            <h3 className="feature-card-title">Background Video Notes</h3>
+            <p className="feature-card-desc">Capture a selected browser window while you work elsewhere, preserving the video title and continuously building searchable notes.</p>
+          </div>
+
+          <div className="feature-card">
+            <div className="feature-icon-wrapper">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 4h16v16H4z"/><path d="M8 9h8M8 13h5M8 17h3"/></svg>
+            </div>
+            <h3 className="feature-card-title">Source-Aware Context</h3>
+            <p className="feature-card-desc">Automatically associates each session with the selected application and window title, so meeting and video notes remain recognizable later.</p>
+          </div>
+
           {/* Card 1 */}
           <div className="feature-card">
             <div className="feature-icon-wrapper">

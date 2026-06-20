@@ -111,11 +111,42 @@ const trashEmptyState = document.getElementById('trash-empty-state');
 const btnClearTrash = document.getElementById('btn-clear-trash');
 const btnRefreshTrash = document.getElementById('btn-refresh-trash');
 
+// Live recording elements
+const recordingSource = document.getElementById('recording-source');
+const recordingMicrophone = document.getElementById('recording-microphone');
+const recordingStatus = document.getElementById('recording-status');
+const recordingContext = document.getElementById('recording-context');
+const recordingStart = document.getElementById('recording-start');
+const recordingPause = document.getElementById('recording-pause');
+const recordingStop = document.getElementById('recording-stop');
+const recordingTranscript = document.getElementById('recording-transcript');
+const recordingDuration = document.getElementById('recording-duration');
+const recordingCopy = document.getElementById('recording-copy');
+const recordingInsert = document.getElementById('recording-insert');
+const recordingSummary = document.getElementById('recording-summary');
+
 // State variables
 const noteId = window.noteAPI.getNoteId();
 let noteConfig = {};
 let saveTimeout = null;
 let globalConfig = null;
+let recordingStreams = [];
+let recordingAudioContext = null;
+let recordingProcessor = null;
+let recordingStartedAt = 0;
+let recordingClock = null;
+let recordingFinalText = '';
+let recordingPartialText = '';
+let recordingIsPaused = false;
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
 
 // Audio Synthesizer variables
 let audioCtx = null;
@@ -292,6 +323,19 @@ async function init() {
   globalConfig = await window.noteAPI.getGlobalConfig();
   initAISettings();
   initAlarmSelects();
+
+  // Listen for pin state changes from keyboard shortcuts
+  if (window.noteAPI.onPinStateChanged) {
+    window.noteAPI.onPinStateChanged((isPinned) => {
+      noteConfig.alwaysOnTop = isPinned;
+      settingAlwaysOnTop.checked = isPinned;
+      if (isPinned) {
+        btnPin.classList.add('active-pin');
+      } else {
+        btnPin.classList.remove('active-pin');
+      }
+    });
+  }
 }
 
 // Debounce save function to reduce filesystem write load
@@ -551,6 +595,10 @@ function switchTab(tabName) {
 
   if (tabName === 'history') {
     loadAndRenderTrash();
+  }
+
+  if (tabName === 'recording') {
+    refreshRecordingSources();
   }
 
   noteConfig.tab = tabName;
@@ -1612,6 +1660,206 @@ btnRefreshTrash.addEventListener('click', () => {
   }
   loadAndRenderTrash();
 });
+
+/* ==========================================================================
+   Live Meeting / Background Media Notes
+   ========================================================================== */
+async function refreshRecordingSources() {
+  if (!window.recordingAPI) {
+    recordingSource.innerHTML = '<option value="">Desktop recording is available in the installed app</option>';
+    recordingStart.disabled = true;
+    return;
+  }
+
+  const previous = recordingSource.value;
+  recordingSource.innerHTML = '<option value="">Loading sources…</option>';
+  try {
+    const sources = await window.recordingAPI.getSources();
+    recordingSource.innerHTML = '<option value="">Choose a window or screen…</option>';
+    sources
+      .sort((a, b) => a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name))
+      .forEach(source => {
+        const option = document.createElement('option');
+        option.value = source.id;
+        option.dataset.name = source.name;
+        option.textContent = `${source.kind === 'screen' ? 'Screen' : 'Window'} · ${source.name}`;
+        recordingSource.appendChild(option);
+      });
+    if ([...recordingSource.options].some(option => option.value === previous)) recordingSource.value = previous;
+  } catch (error) {
+    recordingSource.innerHTML = '<option value="">Unable to list capture sources</option>';
+    setRecordingStatus('error', error.message || 'Source discovery failed');
+  }
+}
+
+function setRecordingStatus(state, message) {
+  recordingStatus.className = `recording-status ${state}`;
+  const label = message || ({ idle: 'Ready', connecting: 'Connecting', recording: 'Recording', paused: 'Paused', error: 'Error' }[state] || state);
+  recordingStatus.innerHTML = `<span></span>${escapeHtml(label)}`;
+  const active = state === 'recording' || state === 'paused' || state === 'connecting';
+  recordingStart.classList.toggle('hidden', active);
+  recordingPause.classList.toggle('hidden', !active || state === 'connecting');
+  recordingStop.classList.toggle('hidden', !active);
+  recordingPause.textContent = state === 'paused' ? 'Resume' : 'Pause';
+}
+
+function renderRecordingTranscript() {
+  const complete = recordingFinalText.trim();
+  const partial = recordingPartialText.trim();
+  if (!complete && !partial) {
+    recordingTranscript.innerHTML = '<div class="recording-empty">Listening for speech…</div>';
+  } else {
+    recordingTranscript.innerHTML = `${escapeHtml(complete)}${partial ? `<span class="recording-partial"> ${escapeHtml(partial)}</span>` : ''}`;
+    recordingTranscript.scrollTop = recordingTranscript.scrollHeight;
+  }
+  recordingCopy.disabled = !complete;
+  recordingInsert.disabled = !complete;
+}
+
+function floatToPcm16(floatSamples) {
+  const pcm = new Int16Array(floatSamples.length);
+  for (let index = 0; index < floatSamples.length; index += 1) {
+    const sample = Math.max(-1, Math.min(1, floatSamples[index]));
+    pcm[index] = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+  }
+  return new Uint8Array(pcm.buffer);
+}
+
+async function openRecordingAudio(includeMicrophone) {
+  const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+  const systemTracks = displayStream.getAudioTracks();
+  if (!systemTracks.length) {
+    displayStream.getTracks().forEach(track => track.stop());
+    throw new Error('The selected source did not provide system audio. Check Screen & System Audio permission.');
+  }
+
+  recordingStreams = [displayStream];
+  if (includeMicrophone) {
+    const micStream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+      video: false,
+    });
+    recordingStreams.push(micStream);
+  }
+
+  recordingAudioContext = new AudioContext({ sampleRate: 24000, latencyHint: 'interactive' });
+  const mix = recordingAudioContext.createGain();
+  mix.gain.value = recordingStreams.length > 1 ? 0.7 : 1;
+  recordingStreams.forEach(stream => recordingAudioContext.createMediaStreamSource(stream).connect(mix));
+
+  recordingProcessor = recordingAudioContext.createScriptProcessor(4096, 1, 1);
+  const silentOutput = recordingAudioContext.createGain();
+  silentOutput.gain.value = 0;
+  mix.connect(recordingProcessor);
+  recordingProcessor.connect(silentOutput);
+  silentOutput.connect(recordingAudioContext.destination);
+  recordingProcessor.onaudioprocess = event => {
+    if (!recordingIsPaused) window.recordingAPI.sendAudio(floatToPcm16(event.inputBuffer.getChannelData(0)));
+  };
+
+  displayStream.getVideoTracks().forEach(track => { track.enabled = false; });
+  systemTracks[0].addEventListener('ended', () => stopLiveRecording());
+}
+
+async function startLiveRecording() {
+  if (!recordingSource.value) {
+    setRecordingStatus('error', 'Choose a source first');
+    return;
+  }
+
+  const selected = recordingSource.selectedOptions[0];
+  const request = {
+    sourceId: recordingSource.value,
+    sourceName: selected.dataset.name || selected.textContent,
+    includeMicrophone: recordingMicrophone.checked,
+  };
+
+  try {
+    setRecordingStatus('connecting');
+    if (request.includeMicrophone) await window.recordingAPI.requestMicrophone();
+    const session = await window.recordingAPI.start(request);
+    await openRecordingAudio(request.includeMicrophone);
+    recordingFinalText = '';
+    recordingPartialText = '';
+    recordingStartedAt = Date.now();
+    recordingIsPaused = false;
+    recordingContext.textContent = `${session.metadata.contentTitle} · ${session.metadata.application}`;
+    recordingContext.classList.remove('hidden');
+    recordingClock = setInterval(updateRecordingClock, 1000);
+    renderRecordingTranscript();
+    setRecordingStatus('recording');
+    trackAppEvent('live_notes_start', { source_type: session.metadata.sourceType, microphone: request.includeMicrophone });
+  } catch (error) {
+    cleanupRecordingMedia();
+    await window.recordingAPI.stop().catch(() => {});
+    setRecordingStatus('error', error.message || 'Could not start recording');
+  }
+}
+
+async function toggleLiveRecordingPause() {
+  recordingIsPaused = !recordingIsPaused;
+  if (recordingIsPaused) {
+    await recordingAudioContext?.suspend();
+    await window.recordingAPI.pause();
+    setRecordingStatus('paused');
+  } else {
+    await recordingAudioContext?.resume();
+    await window.recordingAPI.resume();
+    setRecordingStatus('recording');
+  }
+}
+
+function cleanupRecordingMedia() {
+  clearInterval(recordingClock);
+  recordingClock = null;
+  recordingProcessor?.disconnect();
+  recordingProcessor = null;
+  recordingStreams.forEach(stream => stream.getTracks().forEach(track => track.stop()));
+  recordingStreams = [];
+  recordingAudioContext?.close().catch(() => {});
+  recordingAudioContext = null;
+  recordingIsPaused = false;
+}
+
+async function stopLiveRecording() {
+  if (!window.recordingAPI) return;
+  cleanupRecordingMedia();
+  await window.recordingAPI.stop().catch(error => console.warn('Recording stop failed', error));
+  setRecordingStatus('idle');
+  trackAppEvent('live_notes_stop', { duration_sec: Math.round((Date.now() - recordingStartedAt) / 1000) });
+}
+
+function updateRecordingClock() {
+  const seconds = Math.max(0, Math.floor((Date.now() - recordingStartedAt) / 1000));
+  recordingDuration.textContent = `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`;
+}
+
+recordingStart.addEventListener('click', startLiveRecording);
+recordingPause.addEventListener('click', toggleLiveRecordingPause);
+recordingStop.addEventListener('click', stopLiveRecording);
+recordingCopy.addEventListener('click', async () => navigator.clipboard.writeText(recordingFinalText.trim()));
+recordingInsert.addEventListener('click', () => {
+  const text = recordingFinalText.trim();
+  if (!text) return;
+  noteEditor.value = `${noteEditor.value}${noteEditor.value ? '\n\n' : ''}${text}`;
+  noteEditor.dispatchEvent(new Event('input'));
+  switchTab('note');
+});
+
+if (window.recordingAPI) {
+  window.recordingAPI.onState(({ state, message }) => setRecordingStatus(state, message));
+  window.recordingAPI.onTranscript(event => {
+    if (event.type === 'partial') recordingPartialText = event.text || '';
+    if (event.type === 'final') {
+      const finalChunk = (event.text || recordingPartialText).trim();
+      if (finalChunk) recordingFinalText += `${recordingFinalText ? ' ' : ''}${finalChunk}`;
+      recordingPartialText = '';
+    }
+    if (event.type === 'error') setRecordingStatus('error', event.message);
+    if (event.type === 'summary' && event.text) recordingSummary.textContent = event.text;
+    renderRecordingTranscript();
+  });
+}
 
 // Initialize application on load
 window.addEventListener('DOMContentLoaded', init);

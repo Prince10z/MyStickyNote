@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain, screen, globalShortcut } = require('electro
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
+const { registerRecordingFeature } = require('./dist-electron/recording.js');
 
 // Load environment variables from .env if it exists
 function loadEnv() {
@@ -483,6 +484,19 @@ ipcMain.handle('restore-note', (event, noteId) => {
 app.whenReady().then(() => {
   loadConfig();
   updateDockVisibility();
+
+  registerRecordingFeature({
+    getGlobalConfig: () => notesConfig.global || {},
+    isTrustedSender: (senderUrl) => {
+      try {
+        if (senderUrl.startsWith('file://')) return true;
+        const configuredRemote = process.env.APP_REMOTE_URL;
+        return Boolean(configuredRemote) && new URL(senderUrl).origin === new URL(configuredRemote).origin;
+      } catch {
+        return false;
+      }
+    }
+  });
   
   // Check for updates automatically on startup
   try {
@@ -599,4 +613,3 @@ ipcMain.on('log-error', (event, err) => {
 ipcMain.on('log-msg', (event, msg) => {
   console.log('\x1b[36m[RENDERER LOG]:\x1b[0m', msg);
 });
-
