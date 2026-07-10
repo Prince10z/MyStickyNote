@@ -158,10 +158,10 @@ wss.on("connection", (socket, request) => {
     if (idleFor >= 4000) emitPartial();
   }, 1500);
 
-  socket.on("message", raw => {
-    if (typeof raw === "string") {
+  socket.on("message", (raw, isBinary) => {
+    if (!isBinary) {
       try {
-        const event = JSON.parse(raw);
+        const event = JSON.parse(raw.toString());
         const type = String(event.type || "");
 
         if (type === "session.start") {
@@ -231,6 +231,11 @@ wss.on("connection", (socket, request) => {
     totalBytes += bytes.length;
     chunkCount += 1;
     lastTranscriptAt = Date.now();
+
+    // Log every 50 chunks so we can see if audio is actually flowing
+    if (chunkCount % 50 === 0) {
+      console.log(`[mock-gateway] received ${chunkCount} audio chunks so far (total ${totalBytes} bytes)`);
+    }
 
     if (chunkCount % 3 === 0) emitPartial();
     if (chunkCount % 8 === 0) emitFinal();

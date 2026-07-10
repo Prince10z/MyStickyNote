@@ -114,6 +114,7 @@ const btnRefreshTrash = document.getElementById('btn-refresh-trash');
 // Live recording elements
 const recordingSource = document.getElementById('recording-source');
 const recordingMicrophone = document.getElementById('recording-microphone');
+const recordingOpenPermissions = document.getElementById('recording-open-permissions');
 const recordingStatus = document.getElementById('recording-status');
 const recordingContext = document.getElementById('recording-context');
 const recordingStart = document.getElementById('recording-start');
@@ -138,6 +139,11 @@ let recordingClock = null;
 let recordingFinalText = '';
 let recordingPartialText = '';
 let recordingIsPaused = false;
+let recordingSignalTimer = null;
+let recordingSignalDetected = false;
+let recordingPlatform = '';
+let recordingAudioFramesSent = 0;
+const RECORDING_TARGET_SAMPLE_RATE = 24000;
 
 function escapeHtml(value) {
   return String(value)
@@ -1674,6 +1680,9 @@ async function refreshRecordingSources() {
   const previous = recordingSource.value;
   recordingSource.innerHTML = '<option value="">Loading sources…</option>';
   try {
+    const permissions = await window.recordingAPI.getPermissions();
+    recordingPlatform = permissions.platform || '';
+    recordingOpenPermissions.classList.toggle('hidden', recordingPlatform !== 'darwin' || permissions.screen === 'granted');
     const sources = await window.recordingAPI.getSources();
     recordingSource.innerHTML = '<option value="">Choose a window or screen…</option>';
     sources
@@ -1688,6 +1697,7 @@ async function refreshRecordingSources() {
     if ([...recordingSource.options].some(option => option.value === previous)) recordingSource.value = previous;
   } catch (error) {
     recordingSource.innerHTML = '<option value="">Unable to list capture sources</option>';
+    recordingOpenPermissions.classList.toggle('hidden', recordingPlatform !== 'darwin');
     setRecordingStatus('error', error.message || 'Source discovery failed');
   }
 }
@@ -1696,7 +1706,7 @@ function setRecordingStatus(state, message) {
   recordingStatus.className = `recording-status ${state}`;
   const label = message || ({ idle: 'Ready', connecting: 'Connecting', recording: 'Recording', paused: 'Paused', error: 'Error' }[state] || state);
   recordingStatus.innerHTML = `<span></span>${escapeHtml(label)}`;
-  const active = state === 'recording' || state === 'paused' || state === 'connecting';
+  const active = state === 'recording' || state === 'paused' || state === 'connecting' || (state === 'error' && recordingStreams.length > 0);
   recordingStart.classList.toggle('hidden', active);
   recordingPause.classList.toggle('hidden', !active || state === 'connecting');
   recordingStop.classList.toggle('hidden', !active);
@@ -1716,6 +1726,21 @@ function renderRecordingTranscript() {
   recordingInsert.disabled = !complete;
 }
 
+function resampleFloat32(floatSamples, sourceRate, targetRate) {
+  if (sourceRate === targetRate) return floatSamples;
+  const targetLength = Math.max(1, Math.round(floatSamples.length * targetRate / sourceRate));
+  const output = new Float32Array(targetLength);
+  const ratio = (floatSamples.length - 1) / Math.max(1, targetLength - 1);
+  for (let index = 0; index < targetLength; index += 1) {
+    const sourceIndex = index * ratio;
+    const leftIndex = Math.floor(sourceIndex);
+    const rightIndex = Math.min(floatSamples.length - 1, leftIndex + 1);
+    const weight = sourceIndex - leftIndex;
+    output[index] = floatSamples[leftIndex] * (1 - weight) + floatSamples[rightIndex] * weight;
+  }
+  return output;
+}
+
 function floatToPcm16(floatSamples) {
   const pcm = new Int16Array(floatSamples.length);
   for (let index = 0; index < floatSamples.length; index += 1) {
@@ -1725,15 +1750,37 @@ function floatToPcm16(floatSamples) {
   return new Uint8Array(pcm.buffer);
 }
 
-async function openRecordingAudio(includeMicrophone) {
-  const displayStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-  const systemTracks = displayStream.getAudioTracks();
-  if (!systemTracks.length) {
-    displayStream.getTracks().forEach(track => track.stop());
-    throw new Error('The selected source did not provide system audio. Check Screen & System Audio permission.');
+async function requestRecordingDisplayStream() {
+  const preferredOptions = {
+    video: true,
+    audio: { suppressLocalAudioPlayback: false },
+    systemAudio: 'include',
+    windowAudio: 'system',
+    surfaceSwitching: 'include',
+    monitorTypeSurfaces: 'include',
+  };
+  try {
+    return await navigator.mediaDevices.getDisplayMedia(preferredOptions);
+  } catch (error) {
+    if (error?.name === 'TypeError') {
+      return navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+    }
+    throw error;
   }
+}
 
+async function openRecordingAudio(includeMicrophone) {
+  const displayStream = await requestRecordingDisplayStream();
+  const systemTracks = displayStream.getAudioTracks();
+  const systemTrackDetails = systemTracks
+    .map(track => `${track.label || 'unlabeled'}:${track.readyState}:${track.enabled ? 'enabled' : 'disabled'}`)
+    .join(', ') || 'none';
+  console.info('[recording] Display audio tracks', { tracks: systemTrackDetails, platform: recordingPlatform, includeMicrophone });
+  window.noteAPI?.logMsg?.(`[recording] display audio tracks: ${systemTrackDetails}`);
+
+  // Always retain the display stream so cleanup stops its video permission/capture too.
   recordingStreams = [displayStream];
+
   if (includeMicrophone) {
     const micStream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
@@ -1742,10 +1789,29 @@ async function openRecordingAudio(includeMicrophone) {
     recordingStreams.push(micStream);
   }
 
-  recordingAudioContext = new AudioContext({ sampleRate: 24000, latencyHint: 'interactive' });
+  if (systemTracks.length === 0 && !includeMicrophone) {
+    displayStream.getTracks().forEach(track => track.stop());
+    const message = recordingPlatform === 'darwin'
+      ? 'No system audio was shared. In the macOS screen picker, select the YouTube screen/window and enable system audio. Hearing it in headphones is not enough unless macOS shares that audio track with the app.'
+      : 'The selected source provided no system audio. Allow Screen & System Audio Recording, restart the app, then select the screen playing the meeting or video.';
+    throw new Error(message);
+  }
+
+  if (!recordingAudioContext || recordingAudioContext.state === 'closed') {
+    recordingAudioContext = new AudioContext({ sampleRate: RECORDING_TARGET_SAMPLE_RATE, latencyHint: 'interactive' });
+  }
+  if (recordingAudioContext.state === 'suspended') {
+    await recordingAudioContext.resume();
+  }
   const mix = recordingAudioContext.createGain();
-  mix.gain.value = recordingStreams.length > 1 ? 0.7 : 1;
-  recordingStreams.forEach(stream => recordingAudioContext.createMediaStreamSource(stream).connect(mix));
+  const audioStreamCount = recordingStreams.filter(stream => stream.getAudioTracks().length > 0).length;
+  mix.gain.value = audioStreamCount > 1 ? 0.7 : 1;
+
+  recordingStreams.forEach(stream => {
+    if (stream.getAudioTracks().length > 0) {
+      recordingAudioContext.createMediaStreamSource(stream).connect(mix);
+    }
+  });
 
   recordingProcessor = recordingAudioContext.createScriptProcessor(4096, 1, 1);
   const silentOutput = recordingAudioContext.createGain();
@@ -1754,11 +1820,46 @@ async function openRecordingAudio(includeMicrophone) {
   recordingProcessor.connect(silentOutput);
   silentOutput.connect(recordingAudioContext.destination);
   recordingProcessor.onaudioprocess = event => {
-    if (!recordingIsPaused) window.recordingAPI.sendAudio(floatToPcm16(event.inputBuffer.getChannelData(0)));
+    if (recordingIsPaused) return;
+    const samples = event.inputBuffer.getChannelData(0);
+    let squareSum = 0;
+    for (let index = 0; index < samples.length; index += 1) squareSum += samples[index] * samples[index];
+    const rms = Math.sqrt(squareSum / Math.max(1, samples.length));
+    if (!recordingSignalDetected && rms > 0.0015) {
+      recordingSignalDetected = true;
+      clearTimeout(recordingSignalTimer);
+      recordingSignalTimer = null;
+      setRecordingStatus('recording', 'Recording · audio detected');
+    }
+    recordingAudioFramesSent += 1;
+    if (recordingAudioFramesSent === 1 || (recordingAudioFramesSent === 30 && !recordingSignalDetected)) {
+      window.noteAPI?.logMsg?.(`[recording] audio frame ${recordingAudioFramesSent}: rms=${rms.toFixed(6)}, sampleRate=${recordingAudioContext.sampleRate}, streams=${audioStreamCount}`);
+    }
+    const transcriptionSamples = resampleFloat32(samples, recordingAudioContext.sampleRate, RECORDING_TARGET_SAMPLE_RATE);
+    window.recordingAPI.sendAudio(floatToPcm16(transcriptionSamples));
   };
 
-  displayStream.getVideoTracks().forEach(track => { track.enabled = false; });
-  systemTracks[0].addEventListener('ended', () => stopLiveRecording());
+  const videoTracks = displayStream.getVideoTracks();
+  if (videoTracks.length > 0) {
+    videoTracks.forEach(track => {
+      track.enabled = false;
+      track.addEventListener('ended', () => stopLiveRecording(), { once: true });
+    });
+  }
+
+  recordingSignalDetected = false;
+  clearTimeout(recordingSignalTimer);
+  recordingSignalTimer = setTimeout(() => {
+    if (!recordingSignalDetected && !recordingIsPaused) {
+      setRecordingStatus('recording', 'Recording · no audio signal detected');
+      if (!recordingFinalText && !recordingPartialText) {
+        const message = recordingPlatform === 'darwin'
+          ? 'No audio signal yet. Make sure the macOS picker shared system audio for the YouTube source. Audio playing in headphones is not enough if macOS did not share it with the app.'
+          : 'No audio signal yet. Play the video or meeting, check its volume, and confirm Screen & System Audio Recording permission.';
+        recordingTranscript.innerHTML = `<div class="recording-empty">${escapeHtml(message)}</div>`;
+      }
+    }
+  }, 6000);
 }
 
 async function startLiveRecording() {
@@ -1776,7 +1877,22 @@ async function startLiveRecording() {
 
   try {
     setRecordingStatus('connecting');
-    if (request.includeMicrophone) await window.recordingAPI.requestMicrophone();
+    // Create AudioContext synchronously during the click handler before any await
+    if (!recordingAudioContext || recordingAudioContext.state === 'closed') {
+      recordingAudioContext = new AudioContext({ sampleRate: RECORDING_TARGET_SAMPLE_RATE, latencyHint: 'interactive' });
+    }
+    if (recordingAudioContext.state === 'suspended') {
+      recordingAudioContext.resume();
+    }
+
+    const permissions = await window.recordingAPI.getPermissions();
+    if (permissions.screen === 'denied') {
+      throw new Error('Screen & System Audio Recording permission is denied. Enable it in System Settings, then restart myStickynote.');
+    }
+    if (request.includeMicrophone) {
+      const microphoneAllowed = await window.recordingAPI.requestMicrophone();
+      if (!microphoneAllowed) throw new Error('Microphone permission was not granted.');
+    }
     const session = await window.recordingAPI.start(request);
     await openRecordingAudio(request.includeMicrophone);
     recordingFinalText = '';
@@ -1812,6 +1928,10 @@ async function toggleLiveRecordingPause() {
 function cleanupRecordingMedia() {
   clearInterval(recordingClock);
   recordingClock = null;
+  clearTimeout(recordingSignalTimer);
+  recordingSignalTimer = null;
+  recordingSignalDetected = false;
+  recordingAudioFramesSent = 0;
   recordingProcessor?.disconnect();
   recordingProcessor = null;
   recordingStreams.forEach(stream => stream.getTracks().forEach(track => track.stop()));
@@ -1835,6 +1955,10 @@ function updateRecordingClock() {
 }
 
 recordingStart.addEventListener('click', startLiveRecording);
+recordingOpenPermissions.addEventListener('click', async () => {
+  await window.recordingAPI.openPermissions();
+  setRecordingStatus('error', 'Allow Screen & System Audio Recording, then restart myStickynote');
+});
 recordingPause.addEventListener('click', toggleLiveRecordingPause);
 recordingStop.addEventListener('click', stopLiveRecording);
 recordingCopy.addEventListener('click', async () => navigator.clipboard.writeText(recordingFinalText.trim()));
@@ -1847,7 +1971,10 @@ recordingInsert.addEventListener('click', () => {
 });
 
 if (window.recordingAPI) {
-  window.recordingAPI.onState(({ state, message }) => setRecordingStatus(state, message));
+  window.recordingAPI.onState(({ state, message }) => {
+    setRecordingStatus(state, message);
+    if (state === 'idle' && recordingStreams.length > 0) cleanupRecordingMedia();
+  });
   window.recordingAPI.onTranscript(event => {
     if (event.type === 'partial') recordingPartialText = event.text || '';
     if (event.type === 'final') {
@@ -1856,6 +1983,9 @@ if (window.recordingAPI) {
       recordingPartialText = '';
     }
     if (event.type === 'error') setRecordingStatus('error', event.message);
+    if (event.type === 'status' && event.message) {
+      setRecordingStatus(recordingIsPaused ? 'paused' : 'recording', event.message);
+    }
     if (event.type === 'summary' && event.text) recordingSummary.textContent = event.text;
     renderRecordingTranscript();
   });

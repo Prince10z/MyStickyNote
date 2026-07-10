@@ -10,6 +10,7 @@ export class RollingSummaryService {
     private readonly apiKey: string | undefined,
     private readonly model: string,
     private readonly emit: (event: TranscriptEvent) => void,
+    private readonly endpoint = "https://api.openai.com/v1/chat/completions",
   ) {}
 
   add(text: string): void {
@@ -27,13 +28,13 @@ export class RollingSummaryService {
     if (this.running || !this.apiKey) return;
     this.running = true;
     try {
-      const response = await fetch("https://api.openai.com/v1/responses", {
+      const response = await fetch(this.endpoint, {
         method: "POST",
         headers: { Authorization: `Bearer ${this.apiKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           model: this.model,
-          max_output_tokens: 350,
-          input: [
+          max_tokens: 350,
+          messages: [
             { role: "system", content: "Maintain concise live meeting notes. Return Markdown with Key points, Decisions, and Action items. Never invent names or commitments." },
             { role: "user", content: `Previous summary:\n${this.previousSummary || "None"}\n\nTranscript so far:\n${this.transcript.slice(-12000)}` },
           ],
@@ -41,7 +42,7 @@ export class RollingSummaryService {
       });
       if (!response.ok) throw new Error(`Summary request failed (${response.status})`);
       const data: any = await response.json();
-      const summary = data.output_text || data.output?.flatMap((item: any) => item.content || []).map((item: any) => item.text || "").join("\n");
+      const summary = data.choices?.[0]?.message?.content || "";
       if (summary?.trim()) {
         this.previousSummary = summary.trim();
         this.emit({ type: "summary", text: this.previousSummary, at: Date.now() });

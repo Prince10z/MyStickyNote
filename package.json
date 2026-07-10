@@ -7,6 +7,7 @@
     "compile:electron": "esbuild src/main/recording/index.ts --bundle --platform=node --format=cjs --target=node20 --external:electron --outfile=dist-electron/recording.js",
     "sync:web-app": "node scripts/sync-web-app.js",
     "mock:gateway": "node scripts/mock-transcription-gateway.js",
+    "test:recording-gateway": "node scripts/test-mock-transcription-gateway.js",
     "prestart": "npm run compile:electron",
     "start": "electron .",
     "prebuild": "npm run compile:electron && npm run sync:web-app",
@@ -17,7 +18,7 @@
   "license": "ISC",
   "devDependencies": {
     "@types/ws": "^8.18.1",
-    "electron": "^31.0.0",
+    "electron": "39.8.10",
     "electron-builder": "^26.15.3",
     "esbuild": "^0.25.5",
     "playwright": "^1.61.0"

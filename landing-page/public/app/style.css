@@ -2206,6 +2206,7 @@ body.collapsed-note .collapse-icon {
 .recording-status.connecting > span { background: #f59e0b; }
 .recording-status.error > span { background: #ef4444; }
 .recording-field { display: flex; flex-direction: column; gap: 6px; font-size: 11px; font-weight: 600; }
+.recording-permission-btn { width: 100%; padding: 7px 10px; }
 .recording-options { display: flex; gap: 14px; font-size: 11px; }
 .recording-options label { display: flex; align-items: center; gap: 5px; }
 .recording-context { padding: 8px 10px; border: 1px solid rgba(255,255,255,.35); border-radius: 10px; background: rgba(255,255,255,.22); font-size: 10px; line-height: 1.4; }

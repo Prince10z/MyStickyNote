@@ -25,6 +25,7 @@ contextBridge.exposeInMainWorld('noteAPI', {
 contextBridge.exposeInMainWorld('recordingAPI', {
   getSources: () => ipcRenderer.invoke('recording:get-sources'),
   getPermissions: () => ipcRenderer.invoke('recording:get-permissions'),
+  openPermissions: () => ipcRenderer.invoke('recording:open-permissions'),
   requestMicrophone: () => ipcRenderer.invoke('recording:request-microphone'),
   start: (request) => ipcRenderer.invoke('recording:start', request),
   sendAudio: (bytes) => ipcRenderer.send('recording:audio', bytes),
