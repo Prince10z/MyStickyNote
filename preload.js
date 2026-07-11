@@ -19,7 +19,34 @@ contextBridge.exposeInMainWorld('noteAPI', {
   trackEvent: (eventName, params) => ipcRenderer.invoke('track-event', eventName, params),
   onPinStateChanged: (callback) => ipcRenderer.on('pin-state-changed', (event, isPinned) => callback(isPinned)),
   logError: (err) => ipcRenderer.send('log-error', err),
-  logMsg: (msg) => ipcRenderer.send('log-msg', msg)
+  logMsg: (msg) => ipcRenderer.send('log-msg', msg),
+
+  // Notes Library (cross-note search + tags)
+  listAllNotes: (options) => ipcRenderer.invoke('list-all-notes', options),
+  openNote: (noteId) => ipcRenderer.invoke('open-note', noteId),
+
+  // Export
+  exportNote: (noteId, format, text) => ipcRenderer.invoke('export-note', noteId, format, text),
+
+  // Reminders
+  setReminder: (noteId, timestamp, preview) => ipcRenderer.invoke('set-reminder', noteId, timestamp, preview),
+  onReminderFired: (callback) => ipcRenderer.on('reminder-fired', () => callback()),
+
+  // Per-note passphrase lock
+  lockNote: (noteId, passphrase, plaintext) => ipcRenderer.invoke('lock-note', noteId, passphrase, plaintext),
+  unlockNote: (noteId, passphrase) => ipcRenderer.invoke('unlock-note', noteId, passphrase),
+
+  // Integrations (BYOK: user's own Notion/Linear tokens)
+  sendTasksToNotion: (payload) => ipcRenderer.invoke('send-tasks-to-notion', payload),
+  sendTasksToLinear: (payload) => ipcRenderer.invoke('send-tasks-to-linear', payload),
+
+  // Account & cloud sync (optional, Supabase-backed)
+  accountSignUp: (email, password) => ipcRenderer.invoke('account:sign-up', email, password),
+  accountSignIn: (email, password) => ipcRenderer.invoke('account:sign-in', email, password),
+  accountSignOut: () => ipcRenderer.invoke('account:sign-out'),
+  getAccountSession: () => ipcRenderer.invoke('account:get-session'),
+  accountSyncNow: () => ipcRenderer.invoke('account:sync-now'),
+  onNoteUpdatedExternally: (callback) => ipcRenderer.on('note-updated-externally', (event, payload) => callback(payload))
 });
 
 contextBridge.exposeInMainWorld('recordingAPI', {

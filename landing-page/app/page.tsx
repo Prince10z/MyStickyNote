@@ -316,9 +316,9 @@ export default function Home() {
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
               </svg>
             </div>
-            <h3 className="feature-card-title">Privacy by Design</h3>
+            <h3 className="feature-card-title">Privacy-First by Default</h3>
             <p className="feature-card-desc">
-              No accounts, no cloud servers, no telemetry. Your notes and API keys never leave your machine. Verify it yourself in the source code.
+              No account required &mdash; notes are stored locally and your AI provider keys never leave your machine. Optional cloud sync lets you pick up notes on another device if you choose to sign in; anonymous usage analytics help us improve the app. Verify it yourself in the source code.
             </p>
           </div>
           <div className="testimonial-card">

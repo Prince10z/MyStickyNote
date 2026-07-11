@@ -1,8 +1,11 @@
-const { app, BrowserWindow, ipcMain, screen, globalShortcut } = require('electron');
+const { app, BrowserWindow, ipcMain, screen, globalShortcut, dialog, Notification } = require('electron');
 const { autoUpdater } = require('electron-updater');
 const path = require('path');
 const fs = require('fs');
 const { registerRecordingFeature } = require('./dist-electron/recording.js');
+const { lockNote, unlockNote } = require('./src/main/crypto-notes.js');
+const { sendTasksToNotion, sendTasksToLinear } = require('./src/main/integrations.js');
+const { registerSyncFeature } = require('./src/main/sync.js');
 
 // Load environment variables from .env if it exists
 function loadEnv() {
@@ -142,14 +145,24 @@ function createDefaultNoteConfig(id) {
     height: 420,
     alwaysOnTop: false,
     color: 'yellow',
+    visualStyle: 'paper',
     noteText: '',
     tab: 'note',
+    timeSubtab: 'timer',
     timerDuration: 0,
     alarmTime: null,
     stopwatchState: null,
     opacity: 100,
     autoDim: false,
-    dimOpacity: 45
+    dimOpacity: 45,
+    tags: [],
+    locked: false,
+    lockSalt: null,
+    lockIv: null,
+    lockAuthTag: null,
+    lockCiphertext: null,
+    remindAt: null,
+    updatedAt: Date.now()
   };
 }
 
@@ -174,6 +187,8 @@ function createNoteWindow(noteId) {
     height: config.collapsed ? 44 : (config.height || 420),
     x: config.x !== null ? config.x : Math.round((devWidth - 320) / 2),
     y: config.y !== null ? config.y : Math.round((devHeight - 420) / 2),
+    minWidth: 320,
+    minHeight: 44,
     frame: false,
     transparent: true,
     hasShadow: true,
@@ -292,10 +307,159 @@ ipcMain.handle('get-note-config', (event, noteId) => {
 ipcMain.handle('update-note-config', (event, noteId, data) => {
   const index = notesConfig.notes.findIndex(n => n.id === noteId);
   if (index !== -1) {
-    notesConfig.notes[index] = { ...notesConfig.notes[index], ...data };
+    notesConfig.notes[index] = { ...notesConfig.notes[index], ...data, updatedAt: Date.now() };
     saveConfig();
   }
 });
+
+ipcMain.handle('list-all-notes', (event, { query, tag } = {}) => {
+  const needle = (query || '').trim().toLowerCase();
+  const allTagsSet = new Set();
+  notesConfig.notes.forEach(n => (n.tags || []).forEach(t => allTagsSet.add(t)));
+
+  const notes = notesConfig.notes
+    .filter(n => {
+      if (tag && !(n.tags || []).includes(tag)) return false;
+      if (!needle) return true;
+      const haystack = `${n.noteText || ''} ${(n.tags || []).join(' ')}`.toLowerCase();
+      return haystack.includes(needle);
+    })
+    .map(n => ({
+      id: n.id,
+      noteText: n.locked ? '' : (n.noteText || ''),
+      tags: n.tags || [],
+      color: n.color,
+      locked: !!n.locked,
+      updatedAt: n.updatedAt || 0
+    }))
+    .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+  return { notes, allTags: Array.from(allTagsSet).sort() };
+});
+
+ipcMain.handle('open-note', (event, noteId) => {
+  createNoteWindow(noteId);
+});
+
+function escapeHtmlForExport(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+ipcMain.handle('export-note', async (event, noteId, format, text) => {
+  try {
+    const win = BrowserWindow.fromWebContents(event.sender);
+    const defaultName = `sticky-note-${noteId}.${format === 'pdf' ? 'pdf' : format}`;
+    const filters = format === 'pdf'
+      ? [{ name: 'PDF', extensions: ['pdf'] }]
+      : format === 'md'
+        ? [{ name: 'Markdown', extensions: ['md'] }]
+        : [{ name: 'Text', extensions: ['txt'] }];
+
+    const { canceled, filePath } = await dialog.showSaveDialog(win, { defaultPath: defaultName, filters });
+    if (canceled || !filePath) return { error: 'canceled' };
+
+    if (format === 'pdf') {
+      const printWindow = new BrowserWindow({ show: false, webPreferences: { offscreen: true } });
+      const html = `<html><body style="font-family: -apple-system, Helvetica, Arial, sans-serif; white-space: pre-wrap; padding: 48px; font-size: 13px; line-height: 1.6; color: #1a1a1a;">${escapeHtmlForExport(text).replace(/\n/g, '<br>')}</body></html>`;
+      try {
+        await printWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
+        const pdfBuffer = await printWindow.webContents.printToPDF({});
+        fs.writeFileSync(filePath, pdfBuffer);
+      } finally {
+        printWindow.close();
+      }
+    } else {
+      fs.writeFileSync(filePath, text || '', 'utf8');
+    }
+    return { ok: true, filePath };
+  } catch (err) {
+    console.error('[MAIN ERROR] Export failed:', err);
+    return { error: err.message };
+  }
+});
+
+ipcMain.handle('lock-note', (event, noteId, passphrase, plaintext) => {
+  const index = notesConfig.notes.findIndex(n => n.id === noteId);
+  if (index === -1) return { error: 'Note not found' };
+  try {
+    const fields = lockNote(passphrase, plaintext);
+    notesConfig.notes[index] = { ...notesConfig.notes[index], ...fields, updatedAt: Date.now() };
+    saveConfig();
+    return { locked: true, lockSalt: fields.lockSalt, lockIv: fields.lockIv, lockAuthTag: fields.lockAuthTag, lockCiphertext: fields.lockCiphertext };
+  } catch (err) {
+    return { error: err.message };
+  }
+});
+
+ipcMain.handle('unlock-note', (event, noteId, passphrase) => {
+  const config = notesConfig.notes.find(n => n.id === noteId);
+  if (!config) return { error: 'Note not found' };
+  try {
+    const plaintext = unlockNote(config, passphrase);
+    return { noteText: plaintext };
+  } catch (err) {
+    return { error: err.message };
+  }
+});
+
+ipcMain.handle('send-tasks-to-notion', async (event, payload) => {
+  try {
+    return await sendTasksToNotion(payload);
+  } catch (err) {
+    return { error: err.message };
+  }
+});
+
+ipcMain.handle('send-tasks-to-linear', async (event, payload) => {
+  try {
+    return await sendTasksToLinear(payload);
+  } catch (err) {
+    return { error: err.message };
+  }
+});
+
+/* ==========================================================================
+   Note reminders (native OS notifications)
+   ========================================================================== */
+ipcMain.handle('set-reminder', (event, noteId, timestamp, preview) => {
+  const config = notesConfig.notes.find(n => n.id === noteId);
+  if (!config) return { error: 'Note not found' };
+  config.remindAt = timestamp || null;
+  config.remindPreview = preview || '';
+  config.updatedAt = Date.now();
+  saveConfig();
+  return { ok: true };
+});
+
+function checkDueReminders() {
+  const now = Date.now();
+  let changed = false;
+  notesConfig.notes.forEach(note => {
+    if (note.remindAt && note.remindAt <= now) {
+      changed = true;
+      const preview = (note.remindPreview || '').trim();
+      if (Notification.isSupported()) {
+        const notification = new Notification({
+          title: 'MyStickyNote reminder',
+          body: preview || 'Time to check your sticky note.'
+        });
+        notification.on('click', () => createNoteWindow(note.id));
+        notification.show();
+      }
+      note.remindAt = null;
+      const win = windows.get(note.id);
+      if (win && !win.isDestroyed()) {
+        win.webContents.send('reminder-fired');
+      }
+    }
+  });
+  if (changed) saveConfig();
+}
 
 ipcMain.handle('get-global-config', () => {
   return notesConfig.global || {
@@ -497,7 +661,18 @@ app.whenReady().then(() => {
       }
     }
   });
-  
+
+  registerSyncFeature({
+    ipcMain,
+    getNotesConfig: () => notesConfig,
+    saveConfig,
+    getWindow: (noteId) => windows.get(noteId)
+  });
+
+  // Check for due note reminders on launch, then every 30 seconds.
+  checkDueReminders();
+  setInterval(checkDueReminders, 30000);
+
   // Check for updates automatically on startup
   try {
     autoUpdater.checkForUpdatesAndNotify();

@@ -31,6 +31,9 @@
       "renderer/**/*",
       "dist-electron/**/*",
       "assets/**/*",
+      "src/main/crypto-notes.js",
+      "src/main/integrations.js",
+      "src/main/sync.js",
       "package.json"
     ],
     "publish": [
@@ -55,6 +58,7 @@
     }
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.45.4",
     "electron-updater": "^6.8.9",
     "ws": "^8.18.3"
   }

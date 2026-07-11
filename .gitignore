@@ -1,4 +1,11 @@
 node_modules
 dist
+dist-electron
 .DS_Store
 .env
+*.local.json
+notes-export/
+supabase/.temp/
+/scratch*.js
+/test_*.js
+/repomix-output.xml

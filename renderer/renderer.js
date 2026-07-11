@@ -16,6 +16,11 @@ const noteEditor = document.getElementById('note-editor');
 const btnNew = document.getElementById('btn-new');
 const btnColor = document.getElementById('btn-color');
 const colorPalette = document.getElementById('color-palette');
+const themePreviewCard = document.getElementById('theme-preview-card');
+const themePreviewLabel = document.getElementById('theme-preview-label');
+const colorDots = document.querySelectorAll('.color-dot');
+const styleOptions = document.querySelectorAll('.style-option');
+const presetOptions = document.querySelectorAll('.preset-option');
 const btnPin = document.getElementById('btn-pin');
 const btnCollapse = document.getElementById('btn-collapse');
 const btnDelete = document.getElementById('btn-delete');
@@ -125,6 +130,68 @@ const recordingDuration = document.getElementById('recording-duration');
 const recordingCopy = document.getElementById('recording-copy');
 const recordingInsert = document.getElementById('recording-insert');
 const recordingSummary = document.getElementById('recording-summary');
+const recordingSendNotion = document.getElementById('recording-send-notion');
+const recordingSendLinear = document.getElementById('recording-send-linear');
+
+// Time (Timer/Alarm/Stopwatch) sub-tab elements
+const timeSubtabs = document.querySelectorAll('.time-subtab');
+const timeSubpanels = document.querySelectorAll('.time-subpanel');
+
+// Notes Library elements
+const librarySearch = document.getElementById('library-search');
+const libraryTagFilters = document.getElementById('library-tag-filters');
+const libraryList = document.getElementById('library-list');
+const libraryEmptyState = document.getElementById('library-empty-state');
+
+// Tags elements
+const noteTagsList = document.getElementById('note-tags-list');
+const noteTagInput = document.getElementById('note-tag-input');
+
+// Markdown preview / export / reminder / lock elements
+const btnNotePreview = document.getElementById('btn-note-preview');
+const btnNotePreviewLabel = document.getElementById('btn-note-preview-label');
+const notePreview = document.getElementById('note-preview');
+const btnNoteExport = document.getElementById('btn-note-export');
+const noteExportMenu = document.getElementById('note-export-menu');
+const btnNoteRemind = document.getElementById('btn-note-remind');
+const noteRemindPopover = document.getElementById('note-remind-popover');
+const noteRemindDatetime = document.getElementById('note-remind-datetime');
+const btnNoteRemindSet = document.getElementById('btn-note-remind-set');
+const btnNoteRemindClear = document.getElementById('btn-note-remind-clear');
+const noteRemindActiveLabel = document.getElementById('note-remind-active-label');
+const btnNoteLock = document.getElementById('btn-note-lock');
+const btnNoteLockLabel = document.getElementById('btn-note-lock-label');
+const noteLockOverlay = document.getElementById('note-lock-overlay');
+const noteLockPassphraseInput = document.getElementById('note-lock-passphrase-input');
+const btnNoteUnlockSubmit = document.getElementById('btn-note-unlock-submit');
+const noteLockError = document.getElementById('note-lock-error');
+
+// Advanced AI providers toggle
+const btnToggleAdvancedAi = document.getElementById('btn-toggle-advanced-ai');
+const aiAdvancedProviders = document.getElementById('ai-advanced-providers');
+
+// Integrations (Notion / Linear)
+const settingNotionToken = document.getElementById('setting-notion-token');
+const settingNotionDatabase = document.getElementById('setting-notion-database');
+const settingLinearToken = document.getElementById('setting-linear-token');
+const settingLinearTeam = document.getElementById('setting-linear-team');
+
+// AI result Notion/Linear send buttons
+const btnAiSendNotion = document.getElementById('btn-ai-send-notion');
+const btnAiSendLinear = document.getElementById('btn-ai-send-linear');
+
+// Account / cloud sync elements
+const accountSignedOut = document.getElementById('account-signed-out');
+const accountSignedIn = document.getElementById('account-signed-in');
+const accountEmailInput = document.getElementById('account-email');
+const accountPasswordInput = document.getElementById('account-password');
+const btnAccountSignin = document.getElementById('btn-account-signin');
+const btnAccountSignup = document.getElementById('btn-account-signup');
+const btnAccountSignout = document.getElementById('btn-account-signout');
+const accountError = document.getElementById('account-error');
+const accountEmailLabel = document.getElementById('account-email-label');
+const accountSyncStatus = document.getElementById('account-sync-status');
+const btnAccountSyncNow = document.getElementById('btn-account-sync-now');
 
 // State variables
 const noteId = window.noteAPI.getNoteId();
@@ -144,6 +211,77 @@ let recordingSignalDetected = false;
 let recordingPlatform = '';
 let recordingAudioFramesSent = 0;
 const RECORDING_TARGET_SAMPLE_RATE = 24000;
+const COLOR_CLASSES = ['theme-yellow', 'theme-blue', 'theme-green', 'theme-pink', 'theme-purple', 'theme-dark'];
+const VISUAL_STYLE_CLASSES = ['style-paper', 'style-neon', 'style-pastel', 'style-focus', 'style-holo', 'style-terminal'];
+const VALID_COLORS = ['yellow', 'blue', 'green', 'pink', 'purple', 'dark'];
+const VALID_STYLES = ['paper', 'neon', 'pastel', 'focus', 'holo', 'terminal'];
+const COLOR_LABELS = { yellow: 'Yellow', blue: 'Blue', green: 'Green', pink: 'Pink', purple: 'Purple', dark: 'Dark' };
+const STYLE_LABELS = { paper: 'Paper', neon: 'Neon', pastel: 'Pastel', focus: 'Focus', holo: 'Holo', terminal: 'Terminal' };
+let themeTransitionTimeout = null;
+let newNoteAnimationTimeout = null;
+
+function normalizeColor(color) {
+  return VALID_COLORS.includes(color) ? color : 'yellow';
+}
+
+function normalizeVisualStyle(visualStyle) {
+  return VALID_STYLES.includes(visualStyle) ? visualStyle : 'paper';
+}
+
+function startThemeTransition() {
+  if (themeTransitionTimeout) clearTimeout(themeTransitionTimeout);
+  document.body.classList.remove('theme-switching');
+  document.body.offsetWidth;
+  document.body.classList.add('theme-switching');
+  themeTransitionTimeout = setTimeout(() => {
+    document.body.classList.remove('theme-switching');
+    themeTransitionTimeout = null;
+  }, 420);
+}
+
+function updateThemePreview(color = noteConfig.color, visualStyle = noteConfig.visualStyle, label = null) {
+  if (!themePreviewCard || !themePreviewLabel) return;
+  const safeColor = normalizeColor(color);
+  const safeStyle = normalizeVisualStyle(visualStyle);
+  themePreviewCard.className = `theme-preview-card preview-${safeStyle} preview-color-${safeColor}`;
+  themePreviewLabel.textContent = label || `${STYLE_LABELS[safeStyle]} · ${COLOR_LABELS[safeColor]}`;
+}
+
+function syncThemeControls() {
+  const activeColor = normalizeColor(noteConfig.color);
+  const activeStyle = normalizeVisualStyle(noteConfig.visualStyle);
+  colorDots.forEach(dot => dot.classList.toggle('active', dot.dataset.color === activeColor));
+  styleOptions.forEach(option => option.classList.toggle('active', option.dataset.style === activeStyle));
+  presetOptions.forEach(option => {
+    option.classList.toggle('active', option.dataset.color === activeColor && option.dataset.style === activeStyle);
+  });
+  updateThemePreview(activeColor, activeStyle);
+}
+
+function applyVisualTheme(color, visualStyle = 'paper', animate = false) {
+  const safeColor = normalizeColor(color);
+  const safeStyle = normalizeVisualStyle(visualStyle);
+  const themeClass = `theme-${safeColor}`;
+  const styleClass = `style-${safeStyle}`;
+  document.body.classList.remove(...COLOR_CLASSES);
+  document.body.classList.remove(...VISUAL_STYLE_CLASSES);
+  document.body.classList.add(themeClass);
+  document.body.classList.add(styleClass);
+  if (animate) startThemeTransition();
+}
+
+function setThemeSelection(color, visualStyle, source = 'manual') {
+  noteConfig.color = normalizeColor(color);
+  noteConfig.visualStyle = normalizeVisualStyle(visualStyle);
+  applyVisualTheme(noteConfig.color, noteConfig.visualStyle, true);
+  syncThemeControls();
+  trackAppEvent('theme_selection_change', {
+    color: noteConfig.color,
+    style: noteConfig.visualStyle,
+    source
+  });
+  triggerStateSave();
+}
 
 function escapeHtml(value) {
   return String(value)
@@ -259,20 +397,12 @@ async function init() {
   trackAppEvent('app_launch', { theme: noteConfig.color || 'yellow' });
 
   // Apply visual theme
-  document.body.className = `theme-${noteConfig.color || 'yellow'}`;
-  if (noteConfig.collapsed) {
-    document.body.classList.add('collapsed-note');
-  }
+  noteConfig.color = normalizeColor(noteConfig.color);
+  noteConfig.visualStyle = normalizeVisualStyle(noteConfig.visualStyle);
+  applyVisualTheme(noteConfig.color, noteConfig.visualStyle);
+  document.body.classList.toggle('collapsed-note', !!noteConfig.collapsed);
   
-  // Set active checkmark on dot
-  const dots = document.querySelectorAll('.color-dot');
-  dots.forEach(dot => {
-    if (dot.dataset.color === noteConfig.color) {
-      dot.classList.add('active');
-    } else {
-      dot.classList.remove('active');
-    }
-  });
+  syncThemeControls();
 
   // Load note text
   noteEditor.value = noteConfig.noteText || '';
@@ -316,6 +446,18 @@ async function init() {
   if (noteConfig.tab) {
     switchTab(noteConfig.tab);
   }
+  switchTimeSubtab(noteConfig.timeSubtab || 'timer');
+
+  // Load tags
+  renderNoteTags();
+
+  // Load lock state
+  if (noteConfig.locked) {
+    showNoteLockOverlay();
+  }
+
+  // Load reminder state
+  renderReminderState();
 
   // Setup alarm clock logic
   startLiveClock();
@@ -330,6 +472,9 @@ async function init() {
   initAISettings();
   initAlarmSelects();
 
+  // Load account / cloud sync status
+  refreshAccountUI();
+
   // Listen for pin state changes from keyboard shortcuts
   if (window.noteAPI.onPinStateChanged) {
     window.noteAPI.onPinStateChanged((isPinned) => {
@@ -342,22 +487,62 @@ async function init() {
       }
     });
   }
+
+  // A reminder fired for this note (main process clears remindAt once it does)
+  if (window.noteAPI.onReminderFired) {
+    window.noteAPI.onReminderFired(() => {
+      noteConfig.remindAt = null;
+      renderReminderState();
+    });
+  }
+
+  // Cloud sync pulled a newer copy of this note from another device.
+  // Only apply it if the user isn't actively typing, to avoid clobbering local edits.
+  if (window.noteAPI.onNoteUpdatedExternally) {
+    window.noteAPI.onNoteUpdatedExternally((payload) => {
+      if (document.activeElement === noteEditor) return;
+      if (typeof payload.noteText === 'string') {
+        noteConfig.noteText = payload.noteText;
+        noteEditor.value = payload.noteText;
+        updateEditorStats();
+        if (!notePreview.classList.contains('hidden')) {
+          notePreview.innerHTML = renderMarkdownLite(noteEditor.value);
+        }
+      }
+      if (Array.isArray(payload.tags)) {
+        noteConfig.tags = payload.tags;
+        renderNoteTags();
+      }
+    });
+  }
 }
 
 // Debounce save function to reduce filesystem write load
 function triggerStateSave() {
   if (saveTimeout) clearTimeout(saveTimeout);
   saveTimeout = setTimeout(() => {
-    noteConfig.noteText = noteEditor.value;
+    // Locked notes don't overwrite noteText from the (empty/placeholder) editor
+    if (!noteConfig.locked) {
+      noteConfig.noteText = noteEditor.value;
+    }
     window.noteAPI.updateNoteConfig(noteId, {
       noteText: noteConfig.noteText,
       color: noteConfig.color,
+      visualStyle: noteConfig.visualStyle,
       tab: noteConfig.tab,
+      timeSubtab: noteConfig.timeSubtab,
       alarmTime: noteConfig.alarmTime,
       opacity: noteConfig.opacity,
       fontSize: noteConfig.fontSize,
       autoDim: noteConfig.autoDim,
-      dimOpacity: noteConfig.dimOpacity
+      dimOpacity: noteConfig.dimOpacity,
+      tags: noteConfig.tags || [],
+      locked: !!noteConfig.locked,
+      lockSalt: noteConfig.lockSalt,
+      lockIv: noteConfig.lockIv,
+      lockAuthTag: noteConfig.lockAuthTag,
+      lockCiphertext: noteConfig.lockCiphertext,
+      remindAt: noteConfig.remindAt || null
     });
   }, 400);
 }
@@ -368,7 +553,13 @@ function triggerStateSave() {
 // Create New Note
 btnNew.addEventListener('click', () => {
   trackAppEvent('note_create');
-  window.noteAPI.createNewNote();
+  if (newNoteAnimationTimeout) clearTimeout(newNoteAnimationTimeout);
+  document.body.classList.add('note-burst');
+  newNoteAnimationTimeout = setTimeout(() => {
+    document.body.classList.remove('note-burst');
+    newNoteAnimationTimeout = null;
+    window.noteAPI.createNewNote();
+  }, 130);
 });
 
 // Delete Current Note
@@ -541,29 +732,44 @@ document.addEventListener('click', (e) => {
 });
 
 // Color dots selectors
-const colorDots = document.querySelectorAll('.color-dot');
 colorDots.forEach(dot => {
-  dot.addEventListener('click', (e) => {
+  const previewColor = dot.dataset.color;
+  dot.addEventListener('mouseenter', () => updateThemePreview(previewColor, noteConfig.visualStyle));
+  dot.addEventListener('focus', () => updateThemePreview(previewColor, noteConfig.visualStyle));
+  dot.addEventListener('click', () => {
     if (window.noteAPI && window.noteAPI.logMsg) {
       window.noteAPI.logMsg(`Color dot clicked. Dataset color: ${dot.dataset.color}`);
     }
-    colorDots.forEach(d => d.classList.remove('active'));
-    dot.classList.add('active');
-    
     const chosenColor = dot.dataset.color;
-    noteConfig.color = chosenColor;
-    
-    // Log class application
     if (window.noteAPI && window.noteAPI.logMsg) {
       window.noteAPI.logMsg(`Applying theme class: theme-${chosenColor}`);
     }
-    document.body.className = `theme-${chosenColor}`;
-    colorPalette.classList.add('hidden');
-    
-    trackAppEvent('theme_change', { color: chosenColor });
-    triggerStateSave();
+    setThemeSelection(chosenColor, noteConfig.visualStyle, 'color');
   });
 });
+
+styleOptions.forEach(option => {
+  const previewStyle = option.dataset.style || 'paper';
+  option.addEventListener('mouseenter', () => updateThemePreview(noteConfig.color, previewStyle));
+  option.addEventListener('focus', () => updateThemePreview(noteConfig.color, previewStyle));
+  option.addEventListener('click', () => {
+    const chosenStyle = option.dataset.style || 'paper';
+    setThemeSelection(noteConfig.color, chosenStyle, 'style');
+  });
+});
+
+presetOptions.forEach(option => {
+  const presetColor = option.dataset.color || 'yellow';
+  const presetStyle = option.dataset.style || 'paper';
+  const presetLabel = option.textContent.trim();
+  option.addEventListener('mouseenter', () => updateThemePreview(presetColor, presetStyle, presetLabel));
+  option.addEventListener('focus', () => updateThemePreview(presetColor, presetStyle, presetLabel));
+  option.addEventListener('click', () => {
+    setThemeSelection(presetColor, presetStyle, `preset:${option.dataset.preset || presetLabel.toLowerCase()}`);
+  });
+});
+
+colorPalette.addEventListener('mouseleave', () => syncThemeControls());
 
 // Auto-save on note edit and update statistics
 noteEditor.addEventListener('input', () => {
@@ -607,6 +813,10 @@ function switchTab(tabName) {
     refreshRecordingSources();
   }
 
+  if (tabName === 'library') {
+    loadNotesLibrary();
+  }
+
   noteConfig.tab = tabName;
   triggerStateSave();
 }
@@ -615,6 +825,20 @@ navItems.forEach(item => {
   item.addEventListener('click', () => {
     switchTab(item.dataset.tab);
   });
+});
+
+/* ==========================================================================
+   Time sub-tabs (Timer / Alarm / Stopwatch consolidated under one nav item)
+   ========================================================================== */
+function switchTimeSubtab(subtabName) {
+  timeSubtabs.forEach(btn => btn.classList.toggle('active', btn.dataset.subtab === subtabName));
+  timeSubpanels.forEach(panel => panel.classList.toggle('active', panel.id === `subpanel-${subtabName}`));
+  noteConfig.timeSubtab = subtabName;
+  triggerStateSave();
+}
+
+timeSubtabs.forEach(btn => {
+  btn.addEventListener('click', () => switchTimeSubtab(btn.dataset.subtab));
 });
 
 /* ==========================================================================
@@ -1291,6 +1515,7 @@ async function testAIConnection() {
 // Floating AI Assistant Panel Actions
 let aiResultCache = '';
 let aiReasoningCache = '';
+let lastAIAction = '';
 
 btnAiSparkle.addEventListener('click', () => {
   if (noteConfig.tab !== 'note') {
@@ -1363,6 +1588,7 @@ aiCustomInput.addEventListener('keydown', (e) => {
 });
 
 async function triggerAIAction(action, customText = '') {
+  lastAIAction = action;
   const provider = globalConfig ? globalConfig.activeProvider || 'gemini' : 'gemini';
   const apiKey = globalConfig && globalConfig.providers?.[provider]?.apiKey;
   trackAppEvent('ai_query', { provider, action });
@@ -1494,6 +1720,9 @@ async function triggerAIAction(action, customText = '') {
       aiReasoningAccordion.classList.add('hidden');
     }
     
+    btnAiSendNotion.classList.toggle('hidden', action !== 'todos');
+    btnAiSendLinear.classList.toggle('hidden', action !== 'todos');
+
     showAIView('result');
   } catch (err) {
     console.error('AI Generation Failed:', err);
@@ -1501,6 +1730,36 @@ async function triggerAIAction(action, customText = '') {
     showAIView('menu');
   }
 }
+
+btnAiSendNotion.addEventListener('click', async () => {
+  const token = settingNotionToken.value.trim();
+  const database = settingNotionDatabase.value.trim();
+  if (!token || !database) {
+    alert('Add your Notion API token and database ID in Settings → Integrations first.');
+    switchTab('settings');
+    return;
+  }
+  btnAiSendNotion.disabled = true;
+  const result = await window.noteAPI.sendTasksToNotion({ token, database, text: aiResultCache });
+  btnAiSendNotion.disabled = false;
+  if (result && result.error) alert(`Notion send failed: ${result.error}`);
+  else alert(`Sent ${result?.count || 0} task(s) to Notion.`);
+});
+
+btnAiSendLinear.addEventListener('click', async () => {
+  const token = settingLinearToken.value.trim();
+  const team = settingLinearTeam.value.trim();
+  if (!token || !team) {
+    alert('Add your Linear API key and team ID in Settings → Integrations first.');
+    switchTab('settings');
+    return;
+  }
+  btnAiSendLinear.disabled = true;
+  const result = await window.noteAPI.sendTasksToLinear({ token, team, text: aiResultCache });
+  btnAiSendLinear.disabled = false;
+  if (result && result.error) alert(`Linear send failed: ${result.error}`);
+  else alert(`Created ${result?.count || 0} issue(s) in Linear.`);
+});
 
 // Result actions
 btnAiBack.addEventListener('click', () => {
@@ -1713,18 +1972,54 @@ function setRecordingStatus(state, message) {
   recordingPause.textContent = state === 'paused' ? 'Resume' : 'Pause';
 }
 
+let recordingSegments = []; // [{ speaker, text }] - manual speaker turns (no auto-diarization from the transcription provider)
+
+function recomputeRecordingFinalText() {
+  recordingFinalText = recordingSegments
+    .filter(seg => seg.text)
+    .map(seg => `**${seg.speaker}:** ${seg.text}`)
+    .join('\n\n');
+}
+
 function renderRecordingTranscript() {
-  const complete = recordingFinalText.trim();
   const partial = recordingPartialText.trim();
-  if (!complete && !partial) {
+  const hasSegments = recordingSegments.some(seg => seg.text);
+  if (!hasSegments && !partial) {
     recordingTranscript.innerHTML = '<div class="recording-empty">Listening for speech…</div>';
   } else {
-    recordingTranscript.innerHTML = `${escapeHtml(complete)}${partial ? `<span class="recording-partial"> ${escapeHtml(partial)}</span>` : ''}`;
+    let html = recordingSegments
+      .filter(seg => seg.text)
+      .map((seg, idx) => `<div class="transcript-segment"><span class="speaker-badge" contenteditable="true" spellcheck="false" data-speaker="${escapeHtml(seg.speaker)}">${escapeHtml(seg.speaker)}</span><span class="transcript-segment-text">${escapeHtml(seg.text)}</span></div>`)
+      .join('');
+    if (partial) html += `<div class="recording-partial-line"><span class="recording-partial">${escapeHtml(partial)}</span></div>`;
+    recordingTranscript.innerHTML = html;
     recordingTranscript.scrollTop = recordingTranscript.scrollHeight;
   }
-  recordingCopy.disabled = !complete;
-  recordingInsert.disabled = !complete;
+  recordingCopy.disabled = !hasSegments;
+  recordingInsert.disabled = !hasSegments;
+  recordingSendLinear.disabled = !hasSegments;
 }
+
+// Renaming a speaker badge renames every segment currently sharing that same label
+recordingTranscript.addEventListener('focusout', (e) => {
+  const badge = e.target.closest('.speaker-badge');
+  if (!badge) return;
+  const oldName = badge.dataset.speaker;
+  const newName = badge.textContent.trim() || oldName;
+  if (newName !== oldName) {
+    recordingSegments.forEach(seg => { if (seg.speaker === oldName) seg.speaker = newName; });
+    recomputeRecordingFinalText();
+  }
+  renderRecordingTranscript();
+});
+
+const recordingNewSpeaker = document.getElementById('recording-new-speaker');
+recordingNewSpeaker.addEventListener('click', () => {
+  const usedNames = new Set(recordingSegments.map(seg => seg.speaker));
+  let n = 2;
+  while (usedNames.has(`Speaker ${n}`)) n += 1;
+  recordingSegments.push({ speaker: `Speaker ${n}`, text: '' });
+});
 
 function resampleFloat32(floatSamples, sourceRate, targetRate) {
   if (sourceRate === targetRate) return floatSamples;
@@ -1897,6 +2192,9 @@ async function startLiveRecording() {
     await openRecordingAudio(request.includeMicrophone);
     recordingFinalText = '';
     recordingPartialText = '';
+    recordingSegments = [];
+    recordingSummary.textContent = '';
+    recordingSendNotion.disabled = true;
     recordingStartedAt = Date.now();
     recordingIsPaused = false;
     recordingContext.textContent = `${session.metadata.contentTitle} · ${session.metadata.application}`;
@@ -1979,17 +2277,439 @@ if (window.recordingAPI) {
     if (event.type === 'partial') recordingPartialText = event.text || '';
     if (event.type === 'final') {
       const finalChunk = (event.text || recordingPartialText).trim();
-      if (finalChunk) recordingFinalText += `${recordingFinalText ? ' ' : ''}${finalChunk}`;
+      if (finalChunk) {
+        if (recordingSegments.length === 0) {
+          recordingSegments.push({ speaker: 'Speaker 1', text: finalChunk });
+        } else {
+          const last = recordingSegments[recordingSegments.length - 1];
+          last.text = last.text ? `${last.text} ${finalChunk}` : finalChunk;
+        }
+        recomputeRecordingFinalText();
+      }
       recordingPartialText = '';
     }
     if (event.type === 'error') setRecordingStatus('error', event.message);
     if (event.type === 'status' && event.message) {
       setRecordingStatus(recordingIsPaused ? 'paused' : 'recording', event.message);
     }
-    if (event.type === 'summary' && event.text) recordingSummary.textContent = event.text;
+    if (event.type === 'summary' && event.text) {
+      recordingSummary.textContent = event.text;
+      recordingSendNotion.disabled = false;
+    }
     renderRecordingTranscript();
   });
 }
+
+recordingSendNotion.addEventListener('click', async () => {
+  const token = settingNotionToken.value.trim();
+  const database = settingNotionDatabase.value.trim();
+  if (!token || !database) {
+    alert('Add your Notion API token and database ID in Settings → Integrations first.');
+    switchTab('settings');
+    return;
+  }
+  const summaryText = recordingSummary.textContent.trim();
+  if (!summaryText) return;
+  recordingSendNotion.disabled = true;
+  const result = await window.noteAPI.sendTasksToNotion({ token, database, text: summaryText });
+  recordingSendNotion.disabled = false;
+  if (result && result.error) alert(`Notion send failed: ${result.error}`);
+  else alert('Summary sent to Notion.');
+});
+
+recordingSendLinear.addEventListener('click', async () => {
+  const token = settingLinearToken.value.trim();
+  const team = settingLinearTeam.value.trim();
+  if (!token || !team) {
+    alert('Add your Linear API key and team ID in Settings → Integrations first.');
+    switchTab('settings');
+    return;
+  }
+  const text = recordingFinalText.trim();
+  if (!text) return;
+  recordingSendLinear.disabled = true;
+  const result = await window.noteAPI.sendTasksToLinear({ token, team, text });
+  recordingSendLinear.disabled = false;
+  if (result && result.error) alert(`Linear send failed: ${result.error}`);
+  else alert(`Created ${result?.count || 0} issue(s) in Linear.`);
+});
+
+/* ==========================================================================
+   Tags
+   ========================================================================== */
+function renderNoteTags() {
+  noteTagsList.innerHTML = '';
+  (noteConfig.tags || []).forEach((tag, idx) => {
+    const chip = document.createElement('span');
+    chip.className = 'note-tag-chip';
+    const label = document.createElement('span');
+    label.textContent = tag;
+    const removeBtn = document.createElement('button');
+    removeBtn.type = 'button';
+    removeBtn.className = 'note-tag-remove';
+    removeBtn.textContent = '×';
+    removeBtn.title = 'Remove tag';
+    removeBtn.addEventListener('click', () => {
+      noteConfig.tags.splice(idx, 1);
+      renderNoteTags();
+      triggerStateSave();
+    });
+    chip.appendChild(label);
+    chip.appendChild(removeBtn);
+    noteTagsList.appendChild(chip);
+  });
+}
+
+noteTagInput.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter') return;
+  e.preventDefault();
+  const val = noteTagInput.value.trim().replace(/,+$/, '');
+  if (val) {
+    noteConfig.tags = noteConfig.tags || [];
+    if (!noteConfig.tags.includes(val)) {
+      noteConfig.tags.push(val);
+      renderNoteTags();
+      triggerStateSave();
+    }
+  }
+  noteTagInput.value = '';
+});
+
+/* ==========================================================================
+   Markdown-lite preview (checklists, code blocks, bold/italic)
+   ========================================================================== */
+function renderInlineMarkdown(line) {
+  let html = escapeHtml(line);
+  html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+  return html;
+}
+
+function renderMarkdownLite(raw) {
+  const rawLines = raw.split('\n');
+  const parts = [];
+  let inFence = false;
+  let fenceBuffer = [];
+  rawLines.forEach((line, idx) => {
+    if (/^\s*```/.test(line)) {
+      if (!inFence) {
+        inFence = true;
+        fenceBuffer = [];
+      } else {
+        inFence = false;
+        parts.push(`<pre class="md-code-block"><code>${escapeHtml(fenceBuffer.join('\n'))}</code></pre>`);
+      }
+      return;
+    }
+    if (inFence) {
+      fenceBuffer.push(line);
+      return;
+    }
+    const checklistMatch = line.match(/^(\s*)-\s\[( |x|X)\]\s?(.*)$/);
+    if (checklistMatch) {
+      const checked = /x/i.test(checklistMatch[2]);
+      parts.push(`<div class="md-checklist-item"><input type="checkbox" class="md-checklist-box" data-line="${idx}" ${checked ? 'checked' : ''}><span>${renderInlineMarkdown(checklistMatch[3])}</span></div>`);
+      return;
+    }
+    parts.push(renderInlineMarkdown(line));
+  });
+  if (inFence && fenceBuffer.length) {
+    parts.push(`<pre class="md-code-block"><code>${escapeHtml(fenceBuffer.join('\n'))}</code></pre>`);
+  }
+  return parts.join('<br>') || '<span class="recording-empty">Nothing to preview yet.</span>';
+}
+
+btnNotePreview.addEventListener('click', () => {
+  const currentlyShowingPreview = !notePreview.classList.contains('hidden');
+  if (currentlyShowingPreview) {
+    notePreview.classList.add('hidden');
+    noteEditor.classList.remove('hidden');
+    btnNotePreviewLabel.textContent = 'Preview';
+  } else {
+    notePreview.innerHTML = renderMarkdownLite(noteEditor.value);
+    notePreview.classList.remove('hidden');
+    noteEditor.classList.add('hidden');
+    btnNotePreviewLabel.textContent = 'Edit';
+  }
+});
+
+noteEditor.addEventListener('input', () => {
+  if (!notePreview.classList.contains('hidden')) {
+    notePreview.innerHTML = renderMarkdownLite(noteEditor.value);
+  }
+});
+
+notePreview.addEventListener('click', (e) => {
+  const box = e.target.closest('.md-checklist-box');
+  if (!box) return;
+  const lineIdx = Number(box.dataset.line);
+  const lines = noteEditor.value.split('\n');
+  const match = lines[lineIdx] ? lines[lineIdx].match(/^(\s*-\s\[)( |x|X)(\].*)$/) : null;
+  if (match) {
+    lines[lineIdx] = `${match[1]}${box.checked ? 'x' : ' '}${match[3]}`;
+    noteEditor.value = lines.join('\n');
+    noteEditor.dispatchEvent(new Event('input'));
+    notePreview.innerHTML = renderMarkdownLite(noteEditor.value);
+  }
+});
+
+/* ==========================================================================
+   Export (Markdown / Text / PDF)
+   ========================================================================== */
+btnNoteExport.addEventListener('click', (e) => {
+  e.stopPropagation();
+  noteExportMenu.classList.toggle('hidden');
+});
+
+document.addEventListener('click', (e) => {
+  if (!noteExportMenu.contains(e.target) && !btnNoteExport.contains(e.target)) {
+    noteExportMenu.classList.add('hidden');
+  }
+});
+
+noteExportMenu.querySelectorAll('button[data-format]').forEach(btn => {
+  btn.addEventListener('click', async () => {
+    noteExportMenu.classList.add('hidden');
+    const format = btn.dataset.format;
+    trackAppEvent('note_export', { format });
+    const result = await window.noteAPI.exportNote(noteId, format, noteEditor.value);
+    if (result && result.error && result.error !== 'canceled') {
+      alert(`Export failed: ${result.error}`);
+    }
+  });
+});
+
+/* ==========================================================================
+   Reminders
+   ========================================================================== */
+function toDatetimeLocalValue(d) {
+  const pad = n => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function renderReminderState() {
+  if (noteConfig.remindAt) {
+    const d = new Date(noteConfig.remindAt);
+    noteRemindActiveLabel.textContent = `Reminder set for ${d.toLocaleString()}`;
+    noteRemindActiveLabel.classList.remove('hidden');
+    btnNoteRemindClear.classList.remove('hidden');
+    noteRemindDatetime.value = toDatetimeLocalValue(d);
+  } else {
+    noteRemindActiveLabel.classList.add('hidden');
+    btnNoteRemindClear.classList.add('hidden');
+  }
+}
+
+btnNoteRemind.addEventListener('click', (e) => {
+  e.stopPropagation();
+  noteRemindPopover.classList.toggle('hidden');
+});
+
+document.addEventListener('click', (e) => {
+  if (!noteRemindPopover.contains(e.target) && !btnNoteRemind.contains(e.target)) {
+    noteRemindPopover.classList.add('hidden');
+  }
+});
+
+btnNoteRemindSet.addEventListener('click', async () => {
+  if (!noteRemindDatetime.value) return;
+  const timestamp = new Date(noteRemindDatetime.value).getTime();
+  if (Number.isNaN(timestamp) || timestamp <= Date.now()) {
+    alert('Pick a time in the future.');
+    return;
+  }
+  noteConfig.remindAt = timestamp;
+  await window.noteAPI.setReminder(noteId, timestamp, noteEditor.value.slice(0, 120));
+  renderReminderState();
+  triggerStateSave();
+  noteRemindPopover.classList.add('hidden');
+  trackAppEvent('note_reminder_set');
+});
+
+btnNoteRemindClear.addEventListener('click', async () => {
+  noteConfig.remindAt = null;
+  await window.noteAPI.setReminder(noteId, null, '');
+  renderReminderState();
+  triggerStateSave();
+  noteRemindPopover.classList.add('hidden');
+});
+
+/* ==========================================================================
+   Per-note passphrase lock (AES-256-GCM, handled in the main process)
+   ========================================================================== */
+function showNoteLockOverlay() {
+  noteLockOverlay.classList.remove('hidden');
+  noteEditor.classList.add('hidden');
+  notePreview.classList.add('hidden');
+}
+
+function hideNoteLockOverlay() {
+  noteLockOverlay.classList.add('hidden');
+  noteEditor.classList.remove('hidden');
+  noteLockPassphraseInput.value = '';
+  noteLockError.classList.add('hidden');
+}
+
+btnNoteLock.addEventListener('click', async () => {
+  if (noteConfig.locked) return; // interaction happens through the unlock overlay
+  const passphrase = prompt('Set a passphrase to lock this note. You will need it to view or edit the note again — there is no recovery if you forget it.');
+  if (!passphrase) return;
+  const result = await window.noteAPI.lockNote(noteId, passphrase, noteEditor.value);
+  if (result && result.error) {
+    alert(`Could not lock note: ${result.error}`);
+    return;
+  }
+  Object.assign(noteConfig, result, { locked: true, noteText: '' });
+  noteEditor.value = '';
+  updateEditorStats();
+  showNoteLockOverlay();
+  triggerStateSave();
+  trackAppEvent('note_locked');
+});
+
+btnNoteUnlockSubmit.addEventListener('click', async () => {
+  const passphrase = noteLockPassphraseInput.value;
+  if (!passphrase) return;
+  const result = await window.noteAPI.unlockNote(noteId, passphrase);
+  if (result && result.error) {
+    noteLockError.textContent = result.error === 'bad-passphrase' ? 'Incorrect passphrase.' : result.error;
+    noteLockError.classList.remove('hidden');
+    return;
+  }
+  noteConfig.locked = false;
+  noteConfig.lockSalt = null;
+  noteConfig.lockIv = null;
+  noteConfig.lockAuthTag = null;
+  noteConfig.lockCiphertext = null;
+  noteEditor.value = result.noteText || '';
+  hideNoteLockOverlay();
+  updateEditorStats();
+  triggerStateSave();
+});
+
+noteLockPassphraseInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') btnNoteUnlockSubmit.click();
+});
+
+/* ==========================================================================
+   Advanced AI providers toggle (BYOK is opt-in, not the default view)
+   ========================================================================== */
+btnToggleAdvancedAi.addEventListener('click', () => {
+  const willShow = aiAdvancedProviders.classList.contains('hidden');
+  aiAdvancedProviders.classList.toggle('hidden');
+  btnToggleAdvancedAi.classList.toggle('expanded', willShow);
+});
+
+/* ==========================================================================
+   Notes Library (cross-note search + tags)
+   ========================================================================== */
+let currentLibraryTag = null;
+let librarySearchTimeout = null;
+
+function renderLibraryTagFilters(tags) {
+  libraryTagFilters.innerHTML = '';
+  tags.forEach(tag => {
+    const chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = `library-tag-filter-chip${currentLibraryTag === tag ? ' active' : ''}`;
+    chip.textContent = tag;
+    chip.addEventListener('click', () => {
+      currentLibraryTag = currentLibraryTag === tag ? null : tag;
+      loadNotesLibrary();
+    });
+    libraryTagFilters.appendChild(chip);
+  });
+}
+
+async function loadNotesLibrary() {
+  if (!window.noteAPI.listAllNotes) return;
+  const query = librarySearch.value.trim();
+  const results = await window.noteAPI.listAllNotes({ query, tag: currentLibraryTag });
+  renderLibraryTagFilters(results.allTags || []);
+  libraryList.innerHTML = '';
+  if (!results.notes || results.notes.length === 0) {
+    libraryEmptyState.classList.remove('hidden');
+    return;
+  }
+  libraryEmptyState.classList.add('hidden');
+  results.notes.forEach(n => {
+    const item = document.createElement('div');
+    item.className = 'library-item';
+    const snippet = (n.noteText || '').slice(0, 140).replace(/\n/g, ' ');
+    const tagsHtml = (n.tags || []).map(t => `<span class="library-item-tag">${escapeHtml(t)}</span>`).join('');
+    item.innerHTML = `<div class="library-item-dot theme-${escapeHtml(n.color || 'yellow')}"></div><div class="library-item-body"><div class="library-item-snippet">${snippet ? escapeHtml(snippet) : '<em>Empty note</em>'}${n.locked ? ' 🔒' : ''}</div><div class="library-item-tags">${tagsHtml}</div></div>`;
+    item.addEventListener('click', () => window.noteAPI.openNote(n.id));
+    libraryList.appendChild(item);
+  });
+}
+
+librarySearch.addEventListener('input', () => {
+  clearTimeout(librarySearchTimeout);
+  librarySearchTimeout = setTimeout(loadNotesLibrary, 200);
+});
+
+/* ==========================================================================
+   Account & Cloud Sync (Supabase-backed, optional)
+   ========================================================================== */
+async function refreshAccountUI() {
+  if (!window.noteAPI.getAccountSession) return;
+  const session = await window.noteAPI.getAccountSession();
+  if (session && session.email) {
+    accountSignedOut.classList.add('hidden');
+    accountSignedIn.classList.remove('hidden');
+    accountEmailLabel.textContent = session.email;
+    accountSyncStatus.textContent = session.lastSyncedAt ? `Last synced ${getRelativeTime(session.lastSyncedAt)}` : 'Not synced yet';
+  } else {
+    accountSignedOut.classList.remove('hidden');
+    accountSignedIn.classList.add('hidden');
+  }
+}
+
+btnAccountSignup.addEventListener('click', async () => {
+  accountError.classList.add('hidden');
+  const email = accountEmailInput.value.trim();
+  const password = accountPasswordInput.value;
+  if (!email || !password) return;
+  btnAccountSignup.disabled = true;
+  const result = await window.noteAPI.accountSignUp(email, password);
+  btnAccountSignup.disabled = false;
+  if (result && result.error) {
+    accountError.textContent = result.error;
+    accountError.classList.remove('hidden');
+    return;
+  }
+  refreshAccountUI();
+});
+
+btnAccountSignin.addEventListener('click', async () => {
+  accountError.classList.add('hidden');
+  const email = accountEmailInput.value.trim();
+  const password = accountPasswordInput.value;
+  if (!email || !password) return;
+  btnAccountSignin.disabled = true;
+  const result = await window.noteAPI.accountSignIn(email, password);
+  btnAccountSignin.disabled = false;
+  if (result && result.error) {
+    accountError.textContent = result.error;
+    accountError.classList.remove('hidden');
+    return;
+  }
+  refreshAccountUI();
+});
+
+btnAccountSignout.addEventListener('click', async () => {
+  await window.noteAPI.accountSignOut();
+  refreshAccountUI();
+});
+
+btnAccountSyncNow.addEventListener('click', async () => {
+  btnAccountSyncNow.disabled = true;
+  accountSyncStatus.textContent = 'Syncing…';
+  const result = await window.noteAPI.accountSyncNow();
+  btnAccountSyncNow.disabled = false;
+  accountSyncStatus.textContent = (result && result.error) ? `Sync failed: ${result.error}` : `Last synced ${getRelativeTime(Date.now())}`;
+});
 
 // Initialize application on load
 window.addEventListener('DOMContentLoaded', init);
